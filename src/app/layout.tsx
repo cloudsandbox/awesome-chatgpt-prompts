@@ -197,7 +197,7 @@ export default async function RootLayout({
             </Script>
           </>
         )}
-        <Providers locale={locale} messages={messages} theme={config.theme} branding={{ ...config.branding, useCloneBranding: config.homepage?.useCloneBranding }}>
+        <Providers locale={locale} messages={messages} theme={config.theme} branding={{ ...config.branding, icon: config.branding.icon, useCloneBranding: config.homepage?.useCloneBranding }} runDestinations={config.runDestinations}>
           {isEmbedRoute ? (
             children
           ) : (

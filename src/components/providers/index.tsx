@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { NextIntlClientProvider, AbstractIntlMessages } from "next-intl";
 import { ThemeStyles } from "./theme-styles";
 import { BrandingProvider } from "./branding-provider";
+import { RunDestinationsProvider } from "./run-destinations-provider";
 
 interface ThemeConfig {
   radius: "none" | "sm" | "md" | "lg";
@@ -19,8 +20,23 @@ interface ThemeConfig {
 interface BrandingConfig {
   name: string;
   logo: string;
+  logoDark?: string;
+  icon?: string;
   description: string;
   useCloneBranding?: boolean;
+}
+
+interface RunDestination {
+  id: string;
+  name: string;
+  url: string;
+  icon?: string;
+  supportsQuerystring?: boolean;
+}
+
+interface RunDestinationsConfig {
+  corporate?: RunDestination[];
+  showPublicPlatforms?: boolean;
 }
 
 interface ProvidersProps {
@@ -29,9 +45,10 @@ interface ProvidersProps {
   messages: AbstractIntlMessages;
   theme: ThemeConfig;
   branding: BrandingConfig;
+  runDestinations?: RunDestinationsConfig;
 }
 
-export function Providers({ children, locale, messages, theme, branding }: ProvidersProps) {
+export function Providers({ children, locale, messages, theme, branding, runDestinations }: ProvidersProps) {
   return (
     <SessionProvider>
       <NextIntlClientProvider locale={locale} messages={messages}>
@@ -41,14 +58,16 @@ export function Providers({ children, locale, messages, theme, branding }: Provi
           enableSystem
           disableTransitionOnChange
         >
-          <ThemeStyles 
-            radius={theme.radius} 
+          <ThemeStyles
+            radius={theme.radius}
             variant={theme.variant}
             density={theme.density}
-            primaryColor={theme.colors.primary} 
+            primaryColor={theme.colors.primary}
           />
           <BrandingProvider branding={branding}>
-            {children}
+            <RunDestinationsProvider runDestinations={runDestinations}>
+              {children}
+            </RunDestinationsProvider>
           </BrandingProvider>
           <Toaster position="bottom-right" />
         </ThemeProvider>

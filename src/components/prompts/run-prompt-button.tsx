@@ -32,6 +32,7 @@ import {
 import { analyticsPrompt } from "@/lib/analytics";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useBranding } from "@/components/providers/branding-provider";
+import { useRunDestinations } from "@/components/providers/run-destinations-provider";
 
 interface Platform {
   id: string;
@@ -248,12 +249,24 @@ export function RunPromptButton({
   const tCommon = useTranslations("common");
   const isMobile = useIsMobile();
   const { useCloneBranding } = useBranding();
+  const { corporate: corporateDestinations, showPublicPlatforms } = useRunDestinations();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [variableDialogOpen, setVariableDialogOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"chat" | "code">(() => getDefaultTab(categoryName, parentCategoryName));
   const [pendingPlatform, setPendingPlatform] = useState<{ id: string; name: string; baseUrl: string; supportsQuerystring?: boolean } | null>(null);
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
+
+  // Convert corporate destinations to Platform format
+  const corporatePlatforms: Platform[] = corporateDestinations.map(dest => ({
+    id: dest.id,
+    name: dest.name,
+    baseUrl: dest.url,
+    supportsQuerystring: dest.supportsQuerystring ?? false,
+  }));
+
+  // Smart behavior: direct click when single corporate platform and no public platforms
+  const useDirectClick = corporatePlatforms.length === 1 && !showPublicPlatforms;
 
   // Initialize variable values when dialog opens
   const openVariableDialog = useCallback((platform: Platform, baseUrl: string) => {
@@ -294,16 +307,16 @@ export function RunPromptButton({
     }
   }, [variableValues, onVariablesFilled, pendingPlatform, getContentWithVariables, content, promptId]);
 
-  const handleRun = (platform: Platform, baseUrl: string) => {
+  const handleRun = useCallback((platform: Platform, baseUrl: string) => {
     // Check if there are unfilled variables (empty values)
     const hasUnfilled = unfilledVariables.some(v => !v.defaultValue || v.defaultValue.trim() === "");
-    
+
     if (hasUnfilled) {
       // Show variable fill dialog first (for both query string and copy flows)
       openVariableDialog(platform, baseUrl);
       return;
     }
-    
+
     if (platform.supportsQuerystring === false) {
       navigator.clipboard.writeText(content);
       setPendingPlatform({ id: platform.id, name: platform.name, baseUrl, supportsQuerystring: platform.supportsQuerystring });
@@ -319,7 +332,7 @@ export function RunPromptButton({
       }
       analyticsPrompt.run(promptId, platform.name);
     }
-  };
+  }, [unfilledVariables, openVariableDialog, content, promptId, title, description]);
 
   const handleOpenPlatform = () => {
     if (pendingPlatform) {
@@ -334,13 +347,20 @@ export function RunPromptButton({
     handleRun(platform, baseUrl);
   };
 
-  // Get media platforms based on prompt type (only if not using clone branding)
-  const mediaPlatforms = useCloneBranding ? [] : (promptType === "IMAGE" ? imagePlatforms : promptType === "VIDEO" ? videoPlatforms : imagePlatforms);
+  // Direct click handler for single corporate platform
+  const handleDirectClick = useCallback(() => {
+    if (!useDirectClick || corporatePlatforms.length === 0) return;
+    const platform = corporatePlatforms[0];
+    handleRun(platform, platform.baseUrl);
+  }, [useDirectClick, corporatePlatforms, handleRun]);
+
+  // Get media platforms based on prompt type (only if not using clone branding and showing public platforms)
+  const mediaPlatforms = (useCloneBranding || !showPublicPlatforms) ? [] : (promptType === "IMAGE" ? imagePlatforms : promptType === "VIDEO" ? videoPlatforms : imagePlatforms);
   const isMediaPrompt = promptType === "IMAGE" || promptType === "VIDEO";
 
   // Get platforms based on active tab, merge with media platforms
-  // Sponsors go to top, then rest sorted alphabetically
-  const basePlatforms = activeTab === "code" ? codePlatforms : chatPlatforms;
+  // Corporate platforms first, then sponsors, then rest sorted alphabetically
+  const basePlatforms = showPublicPlatforms ? (activeTab === "code" ? codePlatforms : chatPlatforms) : [];
   const sortedBasePlatforms = [...basePlatforms].sort((a, b) => {
     // Sponsors first (unless useCloneBranding is true)
     if (!useCloneBranding) {
@@ -349,10 +369,18 @@ export function RunPromptButton({
     }
     return a.name.localeCompare(b.name);
   });
-  
+
+  // Combine corporate platforms with public platforms
+  const allBasePlatforms = [...corporatePlatforms, ...sortedBasePlatforms];
+
   const activePlatforms = isMediaPrompt
-    ? [...mediaPlatforms, ...sortedBasePlatforms]
-    : [...sortedBasePlatforms, ...mediaPlatforms].sort((a, b) => {
+    ? [...mediaPlatforms, ...allBasePlatforms]
+    : [...allBasePlatforms, ...mediaPlatforms].sort((a, b) => {
+        // Corporate platforms always first
+        const aIsCorporate = corporatePlatforms.some(cp => cp.id === a.id);
+        const bIsCorporate = corporatePlatforms.some(cp => cp.id === b.id);
+        if (aIsCorporate && !bIsCorporate) return -1;
+        if (!aIsCorporate && bIsCorporate) return 1;
         if (!useCloneBranding) {
           if (a.sponsor && !b.sponsor) return -1;
           if (!a.sponsor && b.sponsor) return 1;
@@ -475,48 +503,71 @@ export function RunPromptButton({
     </div>
   );
 
+  // Get tooltip text for direct click button
+  const directClickPlatform = useDirectClick && corporatePlatforms.length > 0 ? corporatePlatforms[0] : null;
+
   return (
     <>
-      {/* Mobile: Bottom Sheet */}
-      {isMobile ? (
-        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetTrigger asChild>
-            <Button variant={emphasized ? undefined : variant} size={size} className={emphasized ? `bg-green-600 hover:bg-green-700 text-white ${className || ""}` : className}>
-              <Play className="h-4 w-4" />
-              {size !== "icon" && <span className="ml-1.5">{t("run")}</span>}
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="max-h-[70vh]">
-            <SheetHeader>
-              <SheetTitle>{t("run")}</SheetTitle>
-            </SheetHeader>
-            <div className="py-2">
-              {renderTabButtons()}
-            </div>
-            <div className="overflow-y-auto flex-1 py-2">
-              {activePlatforms.map(renderMobilePlatform)}
-            </div>
-          </SheetContent>
-        </Sheet>
+      {/* Direct click mode: single corporate platform */}
+      {useDirectClick && directClickPlatform ? (
+        <Button
+          variant={emphasized ? undefined : variant}
+          size={size}
+          className={emphasized ? `bg-green-600 hover:bg-green-700 text-white ${className || ""}` : className}
+          onClick={handleDirectClick}
+          title={`Run in ${directClickPlatform.name}`}
+        >
+          <Play className="h-4 w-4" />
+          {size !== "icon" && <span className="ml-1.5">{t("run")}</span>}
+        </Button>
       ) : (
-        /* Desktop: Dropdown */
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant={emphasized ? undefined : variant} size={size} className={emphasized ? `bg-green-600 hover:bg-green-700 text-white ${className || ""}` : className}>
-              <Play className="h-4 w-4" />
-              {size !== "icon" && <span className="ml-1.5">{t("run")}</span>}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            <div className="p-1">
-              {renderTabButtons("small")}
-            </div>
-            <DropdownMenuSeparator />
-            <div className="max-h-64 overflow-y-auto">
-              {activePlatforms.map(renderDropdownPlatform)}
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <>
+          {/* Mobile: Bottom Sheet */}
+          {isMobile ? (
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant={emphasized ? undefined : variant} size={size} className={emphasized ? `bg-green-600 hover:bg-green-700 text-white ${className || ""}` : className}>
+                  <Play className="h-4 w-4" />
+                  {size !== "icon" && <span className="ml-1.5">{t("run")}</span>}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="max-h-[70vh]">
+                <SheetHeader>
+                  <SheetTitle>{t("run")}</SheetTitle>
+                </SheetHeader>
+                <div className="py-2">
+                  {showPublicPlatforms && renderTabButtons()}
+                </div>
+                <div className="overflow-y-auto flex-1 py-2">
+                  {activePlatforms.map(renderMobilePlatform)}
+                </div>
+              </SheetContent>
+            </Sheet>
+          ) : (
+            /* Desktop: Dropdown */
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant={emphasized ? undefined : variant} size={size} className={emphasized ? `bg-green-600 hover:bg-green-700 text-white ${className || ""}` : className}>
+                  <Play className="h-4 w-4" />
+                  {size !== "icon" && <span className="ml-1.5">{t("run")}</span>}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                {showPublicPlatforms && (
+                  <>
+                    <div className="p-1">
+                      {renderTabButtons("small")}
+                    </div>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <div className="max-h-64 overflow-y-auto">
+                  {activePlatforms.map(renderDropdownPlatform)}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </>
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

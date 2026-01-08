@@ -6,6 +6,7 @@ interface BrandingContextValue {
   name: string;
   logo: string;
   logoDark?: string;
+  icon?: string;
   description: string;
   appStoreUrl?: string;
   chromeExtensionUrl?: string;

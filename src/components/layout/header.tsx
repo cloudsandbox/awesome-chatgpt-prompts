@@ -19,7 +19,6 @@ import {
   Copy,
   ExternalLink,
   Chromium,
-  Hammer,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
@@ -104,7 +103,7 @@ export function Header({ authProvider = "credentials", allowRegistration = true 
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className={`flex h-12 items-center gap-4 ${pathname === "/developers" ? "px-4" : "container"}`}>
+      <div className="flex h-12 items-center gap-4 container">
         {/* Mobile menu */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild className="md:hidden">
@@ -117,25 +116,16 @@ export function Header({ authProvider = "credentials", allowRegistration = true 
             <div className="flex flex-col h-full">
               {/* Header */}
               <div className="flex items-center gap-3 p-6 border-b">
-                {branding.logo && (
-                  <>
-                    <Image
-                      src={branding.logo}
-                      alt={branding.name}
-                      width={32}
-                      height={32}
-                      className="h-8 w-8 dark:hidden"
-                    />
-                    <Image
-                      src={branding.logoDark || branding.logo}
-                      alt={branding.name}
-                      width={32}
-                      height={32}
-                      className="h-8 w-8 hidden dark:block"
-                    />
-                  </>
+                {(branding.icon || branding.logo) && (
+                  <Image
+                    src={branding.icon || branding.logo}
+                    alt={branding.name}
+                    width={32}
+                    height={32}
+                    className="h-8 w-8 dark:invert dark:brightness-200"
+                  />
                 )}
-                <span className="text-lg font-semibold mt-2">{branding.name}</span>
+                <span className="text-lg font-semibold">{branding.name}</span>
               </div>
 
               {/* Navigation */}
@@ -211,26 +201,17 @@ export function Header({ authProvider = "credentials", allowRegistration = true 
         {!branding.useCloneBranding ? (
           <ContextMenu>
             <ContextMenuTrigger asChild>
-              <Link href="/" className="flex gap-2">
-                {branding.logo && (
-                  <>
-                    <Image
-                      src={branding.logo}
-                      alt={branding.name}
-                      width={20}
-                      height={20}
-                      className="h-5 w-5 dark:hidden"
-                    />
-                    <Image
-                      src={branding.logoDark || branding.logo}
-                      alt={branding.name}
-                      width={20}
-                      height={20}
-                      className="h-5 w-5 hidden dark:block"
-                    />
-                  </>
+              <Link href="/" className="flex items-center gap-2">
+                {(branding.icon || branding.logo) && (
+                  <Image
+                    src={branding.icon || branding.logo}
+                    alt={branding.name}
+                    width={20}
+                    height={20}
+                    className="h-5 w-5 dark:invert dark:brightness-200"
+                  />
                 )}
-                <span className="font-semibold leading-none mt-[2px]">{branding.name}</span>
+                <span className="font-semibold leading-none">{branding.name}</span>
               </Link>
             </ContextMenuTrigger>
             <ContextMenuContent>
@@ -245,26 +226,17 @@ export function Header({ authProvider = "credentials", allowRegistration = true 
             </ContextMenuContent>
           </ContextMenu>
         ) : (
-          <Link href="/" className="flex gap-2">
-            {branding.logo && (
-              <>
-                <Image
-                  src={branding.logo}
-                  alt={branding.name}
-                  width={20}
-                  height={20}
-                  className="h-5 w-5 dark:hidden"
-                />
-                <Image
-                  src={branding.logoDark || branding.logo}
-                  alt={branding.name}
-                  width={20}
-                  height={20}
-                  className="h-5 w-5 hidden dark:block"
-                />
-              </>
+          <Link href="/" className="flex items-center gap-2">
+            {(branding.icon || branding.logo) && (
+              <Image
+                src={branding.icon || branding.logo}
+                alt={branding.name}
+                width={20}
+                height={20}
+                className="h-5 w-5 dark:invert dark:brightness-200"
+              />
             )}
-            <span className="font-semibold leading-none mt-[2px]">{branding.name}</span>
+            <span className="font-semibold leading-none">{branding.name}</span>
           </Link>
         )}
 
@@ -317,14 +289,6 @@ export function Header({ authProvider = "credentials", allowRegistration = true 
 
         {/* Right side actions */}
         <div className="flex items-center gap-1">
-          {/* Developers link */}
-          <Button asChild variant="ghost" size="icon" className="hidden lg:flex h-8 w-8">
-            <Link href="/developers" title={t("nav.developers")}>
-              <Hammer className="h-4 w-4" />
-              <span className="sr-only">{t("nav.developers")}</span>
-            </Link>
-          </Button>
-
           {/* Create prompt button */}
           {user && (
             <Button asChild variant="ghost" size="icon" className="h-8 w-8">

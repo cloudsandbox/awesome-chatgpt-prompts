@@ -6,15 +6,12 @@ const useCloneBranding = false;
 export default defineConfig({
   // Branding - customize for white-label
   branding: {
-    name: "prompts.chat",
-    logo: "/logo.svg",
-    logoDark: "/logo-dark.svg",
-    favicon: "/logo.svg",
-    description: "Collect, organize, and share AI prompts",
-
-    // Delete this if useCloneBranding is true
-    appStoreUrl: "https://apps.apple.com/tr/app/prompts-chat/id6756895736",
-    chromeExtensionUrl: "https://chromewebstore.google.com/detail/promptschat/eemdohkhbaifiocagjlhibfbhamlbeej",
+    name: "volue.prompts",
+    logo: "/volue-logo.avif",
+    logoDark: "/volue-logo.avif",
+    favicon: "/favicon-32x32.png",
+    icon: "/volue-icon.png",
+    description: "Volue's internal AI prompt library",
   },
 
   // Theme - design system configuration
@@ -35,9 +32,9 @@ export default defineConfig({
   auth: {
     // Available: "credentials" | "google" | "azure" | "github" | "apple" | custom
     // Use `providers` array to enable multiple auth providers
-    providers: ["github", "google", "apple"],
+    providers: ["credentials"],
     // Allow public registration (only applies to credentials provider)
-    allowRegistration: false,
+    allowRegistration: true,
   },
 
   // Internationalization
@@ -84,5 +81,18 @@ export default defineConfig({
         { name: "warp.dev", className: 'py-2', logo: '/sponsors/warp.svg', url: "https://warp.dev/?utm_source=prompts.chat" },
       ],
     },
+  },
+
+  // Run destinations - configure where prompts can be executed
+  runDestinations: {
+    corporate: [
+      {
+        id: "m365-copilot",
+        name: "Microsoft 365 Copilot",
+        url: "https://m365.cloud.microsoft/chat/",
+        supportsQuerystring: false,
+      },
+    ],
+    showPublicPlatforms: false,
   },
 });

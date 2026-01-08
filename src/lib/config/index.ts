@@ -3,6 +3,7 @@ export interface BrandingConfig {
   logo: string;
   logoDark?: string;
   favicon: string;
+  icon?: string;
   description: string;
   appStoreUrl?: string;
   chromeExtensionUrl?: string;
@@ -67,6 +68,19 @@ export interface HomepageConfig {
   };
 }
 
+export interface RunDestination {
+  id: string;
+  name: string;
+  url: string;
+  icon?: string;
+  supportsQuerystring?: boolean; // default: false
+}
+
+export interface RunDestinationsConfig {
+  corporate?: RunDestination[];
+  showPublicPlatforms?: boolean; // default: true
+}
+
 export interface PromptsConfig {
   branding: BrandingConfig;
   theme: ThemeConfig;
@@ -74,6 +88,7 @@ export interface PromptsConfig {
   i18n: I18nConfig;
   features: FeaturesConfig;
   homepage?: HomepageConfig;
+  runDestinations?: RunDestinationsConfig;
 }
 
 export function defineConfig(config: PromptsConfig): PromptsConfig {
@@ -119,6 +134,7 @@ function applyEnvOverrides(config: PromptsConfig): PromptsConfig {
       logo: env.PCHAT_LOGO || config.branding.logo,
       logoDark: env.PCHAT_LOGO_DARK || env.PCHAT_LOGO || config.branding.logoDark,
       favicon: env.PCHAT_FAVICON || config.branding.favicon,
+      icon: config.branding.icon,
       appStoreUrl: config.branding.appStoreUrl,
       chromeExtensionUrl: config.branding.chromeExtensionUrl,
     },
@@ -162,6 +178,7 @@ function applyEnvOverrides(config: PromptsConfig): PromptsConfig {
       achievements: { enabled: false },
       sponsors: { enabled: false, items: [] },
     } : config.homepage,
+    runDestinations: config.runDestinations,
   };
 }
 
