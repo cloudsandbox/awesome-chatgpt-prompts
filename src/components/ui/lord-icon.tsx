@@ -23,12 +23,12 @@ export const LORDICON_URLS: Record<string, string> = {
   "design": "https://cdn.lordicon.com/fqsuxldr.json", // paint palette
 
   // Support & Service
-  "support": "https://cdn.lordicon.com/hbvyhtse.json", // headset
-  "customer": "https://cdn.lordicon.com/dqxvvqzi.json", // customer service
+  "support": "https://cdn.lordicon.com/fdxqrdfe.json", // chat bubbles
+  "customer": "https://cdn.lordicon.com/fdxqrdfe.json", // chat bubbles
 
   // People & HR
-  "hr": "https://cdn.lordicon.com/hrjifpbq.json", // people/team
-  "people": "https://cdn.lordicon.com/hrjifpbq.json",
+  "hr": "https://cdn.lordicon.com/nocovwne.json", // user with ID badge
+  "people": "https://cdn.lordicon.com/hrjifpbq.json", // people/team
 
   // Finance & Money
   "finance": "https://cdn.lordicon.com/qhviklyi.json", // money/chart
