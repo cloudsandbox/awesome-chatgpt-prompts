@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useFilterContext } from "@/components/prompts/filter-context";
+import { CategoryIcon } from "./category-icon";
 
 interface PinnedCategory {
   id: string;
@@ -74,7 +75,7 @@ export function PinnedCategories({ categories, currentCategoryId }: PinnedCatego
               : "bg-background hover:bg-accent border-border"
           )}
         >
-          {category.icon && <span>{category.icon}</span>}
+          <CategoryIcon slug={category.slug} size={14} />
           {category.name}
         </button>
       ))}

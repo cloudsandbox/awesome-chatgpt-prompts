@@ -5,6 +5,7 @@ import { FolderOpen, ChevronRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { SubscribeButton } from "@/components/categories/subscribe-button";
+import { CategoryIcon } from "@/components/categories/category-icon";
 
 // Visible prompt filter
 const visiblePromptFilter = {
@@ -90,9 +91,9 @@ export default async function CategoriesPage() {
             <section key={category.id} className="py-6 first:pt-0">
               {/* Main Category Header */}
               <div className="flex items-start gap-3 mb-3">
-                {category.icon && (
-                  <span className="text-xl mt-0.5">{category.icon}</span>
-                )}
+                <div className="mt-0.5">
+                  <CategoryIcon slug={category.slug} size={28} />
+                </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <Link
@@ -131,9 +132,7 @@ export default async function CategoriesPage() {
                       className="group py-2 px-3 -mx-3 rounded-md hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        {child.icon && (
-                          <span className="text-sm">{child.icon}</span>
-                        )}
+                        <CategoryIcon slug={child.slug} size={18} />
                         <Link
                           href={`/categories/${child.slug}`}
                           className="text-sm font-medium hover:underline"
@@ -153,7 +152,7 @@ export default async function CategoriesPage() {
                         </span>
                       </div>
                       {child.description && (
-                        <p className="text-xs text-muted-foreground mt-1 ml-6 line-clamp-1">
+                        <p className="text-xs text-muted-foreground mt-1 ml-7 line-clamp-1">
                           {child.description}
                         </p>
                       )}

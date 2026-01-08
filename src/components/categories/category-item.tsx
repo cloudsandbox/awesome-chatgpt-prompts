@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { SubscribeButton } from "./subscribe-button";
+import { CategoryIcon } from "./category-icon";
 
 interface CategoryItemProps {
   category: {
@@ -22,9 +23,9 @@ export function CategoryItem({ category, isSubscribed, showSubscribe }: Category
         href={`/categories/${category.slug}`}
         className="flex items-center gap-2 min-w-0 flex-1"
       >
-        {category.icon && (
-          <span className="text-sm shrink-0">{category.icon}</span>
-        )}
+        <span className="shrink-0">
+          <CategoryIcon slug={category.slug} size={18} />
+        </span>
         <span className="text-sm font-medium truncate group-hover:underline">
           {category.name}
         </span>
