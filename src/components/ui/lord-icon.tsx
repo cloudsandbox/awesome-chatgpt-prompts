@@ -4,54 +4,55 @@ import { useEffect, useRef, useState } from "react";
 import { Player } from "@lordicon/react";
 
 // Icon mapping for departments/categories - using free Lordicon CDN icons
+// Each department has a UNIQUE icon to avoid confusion
 export const LORDICON_URLS: Record<string, string> = {
-  // Business & Sales
-  "sales": "https://cdn.lordicon.com/wjyqkiew.json", // handshake/deal
-  "briefcase": "https://cdn.lordicon.com/auvicynv.json", // briefcase
+  // Business & Sales - handshake deal
+  "sales": "https://cdn.lordicon.com/wjyqkiew.json",
+  "briefcase": "https://cdn.lordicon.com/auvicynv.json",
 
-  // Marketing & Communication
-  "marketing": "https://cdn.lordicon.com/wzwygmng.json", // megaphone
+  // Marketing & Communication - megaphone/announcement
+  "marketing": "https://cdn.lordicon.com/wzwygmng.json",
   "megaphone": "https://cdn.lordicon.com/wzwygmng.json",
 
-  // Technology & Engineering
-  "engineering": "https://cdn.lordicon.com/zfmcashd.json", // code/terminal
+  // Technology & Engineering - code/terminal brackets
+  "engineering": "https://cdn.lordicon.com/zfmcashd.json",
   "code": "https://cdn.lordicon.com/zfmcashd.json",
-  "computer": "https://cdn.lordicon.com/vyukcgvf.json", // laptop
+  "computer": "https://cdn.lordicon.com/vyukcgvf.json",
 
-  // Product & Design
-  "product": "https://cdn.lordicon.com/mqdkoaef.json", // rocket/launch
-  "design": "https://cdn.lordicon.com/fqsuxldr.json", // paint palette
+  // Product & Design - rocket launch
+  "product": "https://cdn.lordicon.com/mqdkoaef.json",
+  "design": "https://cdn.lordicon.com/fqsuxldr.json",
 
-  // Support & Service
-  "support": "https://cdn.lordicon.com/fdxqrdfe.json", // chat bubbles
-  "customer": "https://cdn.lordicon.com/fdxqrdfe.json", // chat bubbles
+  // Support & Service - chat bubbles
+  "support": "https://cdn.lordicon.com/fdxqrdfe.json",
+  "customer": "https://cdn.lordicon.com/fdxqrdfe.json",
 
-  // People & HR
-  "hr": "https://cdn.lordicon.com/nocovwne.json", // user with ID badge
-  "people": "https://cdn.lordicon.com/hrjifpbq.json", // people/team
+  // People & HR - heart/care (representing employee care)
+  "hr": "https://cdn.lordicon.com/ohfmmfhn.json",
+  "people": "https://cdn.lordicon.com/hrjifpbq.json",
 
-  // Finance & Money
-  "finance": "https://cdn.lordicon.com/qhviklyi.json", // money/chart
-  "money": "https://cdn.lordicon.com/fpmskzsv.json", // coins
+  // Finance & Money - money/coins
+  "finance": "https://cdn.lordicon.com/fpmskzsv.json",
+  "money": "https://cdn.lordicon.com/fpmskzsv.json",
 
-  // Legal & Documents
-  "legal": "https://cdn.lordicon.com/vdjwmfqs.json", // document/contract
+  // Legal & Documents - document/contract
+  "legal": "https://cdn.lordicon.com/vdjwmfqs.json",
   "document": "https://cdn.lordicon.com/vdjwmfqs.json",
 
-  // Analytics & Data
-  "analytics": "https://cdn.lordicon.com/gqdnbnwt.json", // chart/graph
+  // Analytics & Data - chart/graph
+  "analytics": "https://cdn.lordicon.com/gqdnbnwt.json",
   "data": "https://cdn.lordicon.com/gqdnbnwt.json",
 
-  // Creative
-  "creative": "https://cdn.lordicon.com/slkvcfos.json", // lightbulb/idea
+  // Creative - lightbulb/idea
+  "creative": "https://cdn.lordicon.com/slkvcfos.json",
   "idea": "https://cdn.lordicon.com/slkvcfos.json",
 
-  // Operations
-  "operations": "https://cdn.lordicon.com/kkvxgpti.json", // gear/settings
-  "settings": "https://cdn.lordicon.com/kkvxgpti.json",
+  // Operations - checklist/clipboard
+  "operations": "https://cdn.lordicon.com/winbdcbm.json",
+  "settings": "https://cdn.lordicon.com/hwuyodym.json",
 
-  // Default
-  "default": "https://cdn.lordicon.com/ymrqtsej.json", // star
+  // Default - star
+  "default": "https://cdn.lordicon.com/ymrqtsej.json",
 };
 
 interface LordIconProps {
