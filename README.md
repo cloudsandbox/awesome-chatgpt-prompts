@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/volue-logo.avif" alt="Volue" width="320" />
+</p>
+
 # volue.prompts
 
 Volue's internal AI Prompt Library - Find prompts for your department.
