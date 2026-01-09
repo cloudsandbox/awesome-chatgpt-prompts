@@ -1,12 +1,21 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { PromptsSearchBar } from "./prompts-search-bar";
-import { FilterDropdown } from "./filter-dropdown";
-import { QuickFilters } from "./quick-filters";
-import { ActiveFilters } from "./active-filters";
 import { FilterProvider } from "@/components/prompts/filter-context";
+import { cn } from "@/lib/utils";
+import {
+  FileText,
+  Image,
+  Video,
+  Music,
+  LayoutGrid,
+  Clock,
+  TrendingUp,
+  ArrowUpDown,
+} from "lucide-react";
 
 interface SearchLayoutProps {
   children: React.ReactNode;
@@ -36,31 +45,59 @@ interface SearchLayoutProps {
   }>;
   aiSearchEnabled?: boolean;
   totalResults: number;
-  trendingSearches?: string[];
 }
+
+const promptTypes = [
+  { value: "", label: "All", icon: LayoutGrid },
+  { value: "TEXT", label: "Text", icon: FileText },
+  { value: "IMAGE", label: "Image", icon: Image },
+  { value: "VIDEO", label: "Video", icon: Video },
+  { value: "AUDIO", label: "Audio", icon: Music },
+];
+
+const sortOptions = [
+  { value: "", label: "Newest", icon: Clock },
+  { value: "oldest", label: "Oldest", icon: Clock },
+  { value: "upvotes", label: "Top", icon: TrendingUp },
+];
 
 export function SearchLayout({
   children,
-  categories,
   pinnedCategories,
-  tags,
   popularTags,
   aiSearchEnabled = false,
   totalResults,
-  trendingSearches = ["image generation", "code review", "writing assistant"],
 }: SearchLayoutProps) {
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations();
 
-  // Count active filters
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (searchParams?.get("type")) count++;
-    if (searchParams?.get("category")) count++;
-    if (searchParams?.get("tag")) count++;
-    if (searchParams?.get("sort") && searchParams.get("sort") !== "newest") count++;
-    return count;
-  }, [searchParams]);
+  const currentType = searchParams?.get("type") || "";
+  const currentCategory = searchParams?.get("category") || "";
+  const currentTag = searchParams?.get("tag") || "";
+  const currentSort = searchParams?.get("sort") || "";
+
+  const updateFilter = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    if (value) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    params.delete("page");
+    router.push(`/prompts?${params.toString()}`);
+  };
+
+  const toggleFilter = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    if (params.get(key) === value) {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+    params.delete("page");
+    router.push(`/prompts?${params.toString()}`);
+  };
 
   return (
     <FilterProvider>
@@ -69,39 +106,115 @@ export function SearchLayout({
         <div className="sticky top-14 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
           <div className="container py-4 space-y-3">
             {/* Search Bar */}
-            <PromptsSearchBar
-              aiSearchEnabled={aiSearchEnabled}
-              onToggleFilters={() => setFiltersOpen(!filtersOpen)}
-              filtersOpen={filtersOpen}
-              activeFilterCount={activeFilterCount}
-            />
+            <PromptsSearchBar aiSearchEnabled={aiSearchEnabled} />
 
-            {/* Filter Dropdown */}
-            <FilterDropdown
-              categories={categories}
-              tags={tags}
-              isOpen={filtersOpen}
-              onClose={() => setFiltersOpen(false)}
-            />
+            {/* Type + Sort Chips */}
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
+              {/* Type chips */}
+              {promptTypes.map((type) => {
+                const Icon = type.icon;
+                const isActive = currentType === type.value;
+                return (
+                  <button
+                    key={type.value || "all"}
+                    onClick={() => updateFilter("type", type.value)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full border transition-all",
+                      isActive
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-muted border-input text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {type.label}
+                  </button>
+                );
+              })}
 
-            {/* Quick Filters - only show when dropdown is closed */}
-            {!filtersOpen && (
-              <QuickFilters
-                pinnedCategories={pinnedCategories}
-                popularTags={popularTags}
-                trendingSearches={trendingSearches}
-              />
-            )}
+              <div className="w-px h-5 bg-border mx-1" />
 
-            {/* Active Filters */}
-            <ActiveFilters categories={categories} tags={tags} />
+              {/* Sort chips */}
+              {sortOptions.map((sort) => {
+                const Icon = sort.icon;
+                const isActive = currentSort === sort.value;
+                return (
+                  <button
+                    key={sort.value || "newest"}
+                    onClick={() => updateFilter("sort", sort.value)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full border transition-all",
+                      isActive
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-background hover:bg-muted border-input text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {sort.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Category + Tag Chips */}
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
+              {/* Pinned Categories */}
+              {pinnedCategories.map((category) => {
+                const isActive = currentCategory === category.id;
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => toggleFilter("category", category.id)}
+                    className={cn(
+                      "px-3 py-1 text-sm rounded-full border transition-all",
+                      isActive
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-muted border-input"
+                    )}
+                  >
+                    {category.name}
+                  </button>
+                );
+              })}
+
+              {pinnedCategories.length > 0 && popularTags.length > 0 && (
+                <div className="w-px h-5 bg-border mx-1" />
+              )}
+
+              {/* Popular Tags */}
+              {popularTags.slice(0, 6).map((tag) => {
+                const isActive = currentTag === tag.slug;
+                return (
+                  <button
+                    key={tag.id}
+                    onClick={() => toggleFilter("tag", tag.slug)}
+                    className={cn(
+                      "px-3 py-1 text-sm rounded-full border transition-all"
+                    )}
+                    style={
+                      isActive
+                        ? {
+                            backgroundColor: tag.color,
+                            color: "white",
+                            borderColor: tag.color,
+                          }
+                        : {
+                            borderColor: tag.color + "50",
+                            color: tag.color,
+                          }
+                    }
+                  >
+                    {tag.name}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
         {/* Results */}
         <div className="container py-6">
           <div className="mb-4 text-sm text-muted-foreground text-center">
-            {totalResults} prompts found
+            {totalResults} {t("search.found", { count: totalResults }).replace(/^\d+\s*/, "")}
           </div>
           {children}
         </div>

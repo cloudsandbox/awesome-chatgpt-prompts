@@ -3,23 +3,14 @@
 import { useState, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Search, Sparkles, Loader2, SlidersHorizontal } from "lucide-react";
+import { Search, Sparkles, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 
 interface PromptsSearchBarProps {
   aiSearchEnabled?: boolean;
-  onToggleFilters?: () => void;
-  filtersOpen?: boolean;
-  activeFilterCount?: number;
 }
 
-export function PromptsSearchBar({
-  aiSearchEnabled = false,
-  onToggleFilters,
-  filtersOpen = false,
-  activeFilterCount = 0,
-}: PromptsSearchBarProps) {
+export function PromptsSearchBar({ aiSearchEnabled = false }: PromptsSearchBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations("search");
@@ -85,88 +76,68 @@ export function PromptsSearchBar({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-3xl mx-auto">
-      <div className="flex items-center gap-2">
-        {/* Search input */}
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            value={query}
-            onChange={handleInputChange}
-            placeholder={t("placeholder")}
-            className={cn(
-              "w-full h-12 pl-12 pr-4 text-base rounded-full",
-              "bg-background",
-              "border-2 border-input",
-              "shadow-sm",
-              "focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20",
-              "placeholder:text-muted-foreground",
-              "transition-all duration-200",
-              aiSearchEnabled && "pr-20"
-            )}
-          />
+    <form onSubmit={handleSubmit} className="w-full max-w-2xl mx-auto">
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+        <input
+          type="text"
+          value={query}
+          onChange={handleInputChange}
+          placeholder={t("placeholder")}
+          className={cn(
+            "w-full h-11 pl-12 pr-4 text-base rounded-full",
+            "bg-background",
+            "border border-input",
+            "shadow-sm",
+            "focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20",
+            "placeholder:text-muted-foreground",
+            "transition-all duration-200",
+            aiSearchEnabled && "pr-24"
+          )}
+        />
 
-          {/* Right side buttons inside input */}
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            {/* Expand toggle */}
-            {aiSearchEnabled && (
-              <button
-                type="button"
-                onClick={handleExpandToggle}
-                className={cn(
-                  "p-2 rounded-full transition-colors",
-                  expand
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-muted text-muted-foreground"
-                )}
-                title={t("expandSearch")}
-              >
-                <Sparkles className="h-4 w-4" />
-              </button>
-            )}
-
-            {/* Search button */}
+        {/* Right side buttons */}
+        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {/* Expand toggle */}
+          {aiSearchEnabled && (
             <button
-              type="submit"
-              disabled={isSearching}
+              type="button"
+              onClick={handleExpandToggle}
               className={cn(
                 "p-2 rounded-full transition-colors",
-                "bg-primary text-primary-foreground",
-                "hover:bg-primary/90",
-                "disabled:opacity-50 disabled:cursor-not-allowed"
+                expand
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-muted text-muted-foreground"
               )}
+              title={t("expandSearch")}
             >
-              {isSearching ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4" />
-              )}
+              <Sparkles className="h-4 w-4" />
             </button>
-          </div>
-        </div>
-
-        {/* Filters button */}
-        <Button
-          type="button"
-          variant={filtersOpen ? "default" : "outline"}
-          size="lg"
-          className="h-12 px-4 rounded-full relative"
-          onClick={onToggleFilters}
-        >
-          <SlidersHorizontal className="h-4 w-4 mr-2" />
-          {t("filters")}
-          {activeFilterCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center">
-              {activeFilterCount}
-            </span>
           )}
-        </Button>
+
+          {/* Search button */}
+          <button
+            type="submit"
+            disabled={isSearching}
+            className={cn(
+              "p-2 rounded-full transition-colors",
+              "bg-primary text-primary-foreground",
+              "hover:bg-primary/90",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+          >
+            {isSearching ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Search className="h-4 w-4" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Helper text */}
       {aiSearchEnabled && (
-        <p className="text-center text-sm text-muted-foreground mt-2">
+        <p className="text-center text-xs text-muted-foreground mt-2">
           {expand ? t("expandSearchHint") : t("semanticSearchHint")}
         </p>
       )}
