@@ -5,12 +5,10 @@ import { getTranslations } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import config from "@/../prompts.config";
 import { Button } from "@/components/ui/button";
 import { PromptList } from "@/components/prompts/prompt-list";
 import { SubscribeButton } from "@/components/categories/subscribe-button";
 import { CategoryFilters } from "@/components/categories/category-filters";
-import { McpServerPopup } from "@/components/mcp/mcp-server-popup";
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>;
@@ -178,14 +176,12 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
           </div>
           <div className="hidden md:flex items-center gap-2">
             <CategoryFilters categorySlug={slug} />
-            {config.features.mcp !== false && <McpServerPopup initialCategories={[slug]} showOfficialBranding={!config.homepage?.useCloneBranding} />}
           </div>
         </div>
 
         {/* Mobile filters */}
         <div className="flex md:hidden items-center gap-2 mt-4">
           <CategoryFilters categorySlug={slug} />
-          {config.features.mcp !== false && <McpServerPopup initialCategories={[slug]} showOfficialBranding={!config.homepage?.useCloneBranding} />}
         </div>
       </div>
 

@@ -9,12 +9,8 @@ import { InfinitePromptList } from "@/components/prompts/infinite-prompt-list";
 import { PromptFilters } from "@/components/prompts/prompt-filters";
 import { FilterProvider } from "@/components/prompts/filter-context";
 import { PinnedCategories } from "@/components/categories/pinned-categories";
-import { HFDataStudioDropdown } from "@/components/prompts/hf-data-studio-dropdown";
-import { McpServerPopup } from "@/components/mcp/mcp-server-popup";
 import { db } from "@/lib/db";
 import { isAISearchEnabled, semanticSearch } from "@/lib/ai/embeddings";
-import { isAIGenerationEnabled } from "@/lib/ai/generation";
-import config from "@/../prompts.config";
 
 export const metadata: Metadata = {
   title: "Prompts",
@@ -158,7 +154,6 @@ export default async function PromptsPage({ searchParams }: PromptsPageProps) {
   
   const perPage = 24;
   const aiSearchAvailable = await isAISearchEnabled();
-  const aiGenerationAvailable = await isAIGenerationEnabled();
   const useAISearch = aiSearchAvailable && params.ai === "1" && params.q;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -261,12 +256,6 @@ export default async function PromptsPage({ searchParams }: PromptsPageProps) {
           <span className="text-xs text-muted-foreground">{tSearch("found", { count: total })}</span>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          {!config.homepage?.useCloneBranding && (
-            <div className="flex items-center gap-2">
-              <HFDataStudioDropdown aiGenerationEnabled={aiGenerationAvailable} />
-              {config.features.mcp !== false && <McpServerPopup showOfficialBranding />}
-            </div>
-          )}
           <Button size="sm" className="h-8 text-xs w-full sm:w-auto" asChild>
             <Link href="/prompts/new">
               <Plus className="h-3.5 w-3.5 mr-1" />

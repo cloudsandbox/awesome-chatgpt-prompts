@@ -4,10 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { ArrowLeft, Tag } from "lucide-react";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import config from "@/../prompts.config";
 import { Button } from "@/components/ui/button";
 import { PromptCard } from "@/components/prompts/prompt-card";
-import { McpServerPopup } from "@/components/mcp/mcp-server-popup";
 
 interface TagPageProps {
   params: Promise<{ slug: string }>;
@@ -126,7 +124,6 @@ export default async function TagPage({ params, searchParams }: TagPageProps) {
               {total} {t("prompts")}
             </span>
           </div>
-          {config.features.mcp !== false && <McpServerPopup initialTags={[slug]} showOfficialBranding={!config.homepage?.useCloneBranding} />}
         </div>
       </div>
 
