@@ -3,68 +3,64 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-// Department categories for Volue
-const departments = [
+// =============================================================================
+// TEST DATA CONFIGURATION (matches TESTING_GUIDE.md)
+// =============================================================================
+
+// Admin users
+const adminUsers = [
   {
-    name: "Sales",
-    slug: "sales",
-    icon: "💼",
-    description: "Prompts for customer outreach, proposals, and sales communication",
-    order: 1,
+    email: "admin@prompts.chat",
+    username: "admin",
+    name: "Admin User",
+    password: "password123",
+    role: "ADMIN" as const,
   },
   {
-    name: "Marketing",
-    slug: "marketing",
-    icon: "📢",
-    description: "Content creation, campaigns, and brand messaging",
-    order: 2,
-  },
-  {
-    name: "Engineering",
-    slug: "engineering",
-    icon: "💻",
-    description: "Code assistance, debugging, documentation, and technical writing",
-    order: 3,
-  },
-  {
-    name: "Product Management",
-    slug: "product-management",
-    icon: "📋",
-    description: "Product specs, user stories, roadmaps, and feature planning",
-    order: 4,
-  },
-  {
-    name: "Customer Support",
-    slug: "customer-support",
-    icon: "🎧",
-    description: "Customer responses, troubleshooting guides, and support documentation",
-    order: 5,
-  },
-  {
-    name: "Human Resources",
-    slug: "human-resources",
-    icon: "👥",
-    description: "Job descriptions, policies, onboarding, and employee communication",
-    order: 6,
-  },
-  {
-    name: "Finance",
-    slug: "finance",
-    icon: "📊",
-    description: "Financial reports, analysis, and business documentation",
-    order: 7,
-  },
-  {
-    name: "Operations",
-    slug: "operations",
-    icon: "⚙️",
-    description: "Process documentation, workflows, and operational efficiency",
-    order: 8,
+    email: "demo@volue.com",
+    username: "volue-demo",
+    name: "Volue Demo",
+    password: "demo123",
+    role: "ADMIN" as const,
   },
 ];
 
-// Sample prompts for each department
-const samplePrompts: Record<string, Array<{ title: string; description: string; content: string }>> = {
+// Regular Volue users (all use demo123 password)
+const regularUsers = [
+  { email: "erik.hansen@volue.com", username: "erik.hansen", name: "Erik Hansen" },
+  { email: "ingrid.berg@volue.com", username: "ingrid.berg", name: "Ingrid Berg" },
+  { email: "magnus.larsen@volue.com", username: "magnus.larsen", name: "Magnus Larsen" },
+  { email: "sofie.andersen@volue.com", username: "sofie.andersen", name: "Sofie Andersen" },
+  { email: "ole.nilsen@volue.com", username: "ole.nilsen", name: "Ole Nilsen" },
+  { email: "kari.johansen@volue.com", username: "kari.johansen", name: "Kari Johansen" },
+];
+
+// Tags for filtering
+const tags = [
+  { name: "AI", slug: "ai", color: "#3B82F6" },
+  { name: "Productivity", slug: "productivity", color: "#10B981" },
+  { name: "Writing", slug: "writing", color: "#8B5CF6" },
+  { name: "Code", slug: "code", color: "#F59E0B" },
+  { name: "Email", slug: "email", color: "#EF4444" },
+  { name: "Analysis", slug: "analysis", color: "#06B6D4" },
+  { name: "Documentation", slug: "documentation", color: "#84CC16" },
+  { name: "Templates", slug: "templates", color: "#EC4899" },
+];
+
+// Department categories for Volue
+const departments = [
+  { name: "Sales", slug: "sales", icon: "trending-up", description: "Prompts for customer outreach, proposals, and sales communication", order: 1, pinned: true },
+  { name: "Marketing", slug: "marketing", icon: "megaphone", description: "Content creation, campaigns, and brand messaging", order: 2, pinned: true },
+  { name: "Engineering", slug: "engineering", icon: "code", description: "Code assistance, debugging, documentation, and technical writing", order: 3, pinned: true },
+  { name: "Product Management", slug: "product-management", icon: "layout-grid", description: "Product specs, user stories, roadmaps, and feature planning", order: 4, pinned: true },
+  { name: "Customer Support", slug: "customer-support", icon: "headphones", description: "Customer responses, troubleshooting guides, and support documentation", order: 5, pinned: false },
+  { name: "Human Resources", slug: "human-resources", icon: "users", description: "Job descriptions, policies, onboarding, and employee communication", order: 6, pinned: false },
+  { name: "Finance", slug: "finance", icon: "bar-chart-2", description: "Financial reports, analysis, and business documentation", order: 7, pinned: false },
+  { name: "Operations", slug: "operations", icon: "settings", description: "Process documentation, workflows, and operational efficiency", order: 8, pinned: false },
+];
+
+// Sample prompts for each department with author assignment
+const samplePrompts: Record<string, Array<{ title: string; description: string; content: string; authorIndex: number; tagSlugs: string[] }>> = {
   sales: [
     {
       title: "Cold Email Generator",
@@ -84,6 +80,8 @@ The email should:
 5. Be concise (under 150 words)
 
 Write the email now.`,
+      authorIndex: 0, // Erik
+      tagSlugs: ["email", "ai", "productivity"],
     },
     {
       title: "Proposal Executive Summary",
@@ -101,6 +99,8 @@ The summary should:
 3. Include projected ROI or efficiency gains
 4. Be professional and concise (200-300 words)
 5. End with next steps`,
+      authorIndex: 1, // Ingrid
+      tagSlugs: ["writing", "templates"],
     },
     {
       title: "Objection Handler",
@@ -117,6 +117,26 @@ Provide a thoughtful response that:
 5. Ends with a question to continue the conversation
 
 Keep the tone consultative, not pushy.`,
+      authorIndex: 0, // Erik
+      tagSlugs: ["ai", "productivity"],
+    },
+    {
+      title: "Sales Call Summary",
+      description: "Summarize sales calls and identify next steps",
+      content: `Summarize the following sales call notes and identify actionable next steps:
+
+**Call Notes:**
+{{call_notes}}
+
+Please provide:
+1. **Key Discussion Points**: Main topics covered
+2. **Client Pain Points**: Issues or challenges mentioned
+3. **Interest Level**: Rate 1-5 with reasoning
+4. **Objections Raised**: Any concerns mentioned
+5. **Next Steps**: Specific follow-up actions with deadlines
+6. **Recommended Approach**: Strategy for next interaction`,
+      authorIndex: 2, // Magnus
+      tagSlugs: ["ai", "productivity", "analysis"],
     },
   ],
   marketing: [
@@ -134,6 +154,8 @@ Requirements:
 - Keep it under 200 words
 
 Tone: Professional but approachable`,
+      authorIndex: 3, // Sofie
+      tagSlugs: ["writing", "ai"],
     },
     {
       title: "Case Study Outline",
@@ -155,6 +177,8 @@ Structure the case study with:
 7. Call-to-action
 
 Keep each section concise and focused on measurable outcomes.`,
+      authorIndex: 3, // Sofie
+      tagSlugs: ["writing", "templates", "documentation"],
     },
     {
       title: "Email Newsletter Section",
@@ -171,6 +195,8 @@ Requirements:
 - Maintain Volue's professional yet innovative voice
 
 Topic details: {{details}}`,
+      authorIndex: 1, // Ingrid
+      tagSlugs: ["email", "writing"],
     },
   ],
   engineering: [
@@ -191,6 +217,8 @@ Please analyze for:
 5. **Best Practices**: Does it follow {{language}} conventions?
 
 For each issue found, suggest a specific fix with code examples.`,
+      authorIndex: 2, // Magnus
+      tagSlugs: ["code", "ai", "productivity"],
     },
     {
       title: "Technical Documentation Writer",
@@ -211,6 +239,8 @@ Generate:
 7. Related resources
 
 Use clear, concise technical writing. Include code blocks where appropriate.`,
+      authorIndex: 4, // Ole
+      tagSlugs: ["documentation", "code", "templates"],
     },
     {
       title: "Debug Assistant",
@@ -232,6 +262,29 @@ Please:
 3. Provide step-by-step debugging approach
 4. Suggest specific fixes with code examples
 5. Recommend how to prevent this in the future`,
+      authorIndex: 2, // Magnus
+      tagSlugs: ["code", "ai", "analysis"],
+    },
+    {
+      title: "Git Commit Message Generator",
+      description: "Generate clear, conventional commit messages",
+      content: `Generate a git commit message for the following changes:
+
+**Files changed:**
+{{files}}
+
+**Summary of changes:**
+{{summary}}
+
+Requirements:
+- Follow conventional commits format (type: description)
+- First line under 72 characters
+- Include body if changes are complex
+- Reference any related issues
+
+Types: feat, fix, docs, style, refactor, test, chore`,
+      authorIndex: 4, // Ole
+      tagSlugs: ["code", "productivity"],
     },
   ],
   "product-management": [
@@ -251,6 +304,8 @@ Generate:
 5. Suggested story points (1-13 scale)
 
 Keep acceptance criteria specific and testable.`,
+      authorIndex: 5, // Kari
+      tagSlugs: ["templates", "productivity"],
     },
     {
       title: "PRD Section Writer",
@@ -271,6 +326,8 @@ Generate the following sections:
 7. **Out of Scope**: What this doesn't include
 
 Be specific and actionable.`,
+      authorIndex: 5, // Kari
+      tagSlugs: ["documentation", "templates", "writing"],
     },
     {
       title: "Feature Prioritization Framework",
@@ -291,6 +348,8 @@ Calculate RICE score and provide:
 - Recommendation (prioritize/defer/decline)
 - Key considerations
 - Alternative approaches if applicable`,
+      authorIndex: 1, // Ingrid
+      tagSlugs: ["analysis", "productivity"],
     },
   ],
   "customer-support": [
@@ -312,6 +371,8 @@ Requirements:
 
 Tone: Helpful, patient, and solution-oriented
 Length: Concise but thorough`,
+      authorIndex: 3, // Sofie
+      tagSlugs: ["email", "ai", "templates"],
     },
     {
       title: "Knowledge Base Article",
@@ -331,6 +392,8 @@ Structure:
 7. **Related articles**: Suggest 2-3 related topics
 
 Write in simple, clear language. Avoid jargon.`,
+      authorIndex: 0, // Erik
+      tagSlugs: ["documentation", "writing", "templates"],
     },
   ],
   "human-resources": [
@@ -354,6 +417,8 @@ Include:
 
 Tone: Professional, inclusive, and engaging
 Make it appealing while being accurate about requirements.`,
+      authorIndex: 5, // Kari
+      tagSlugs: ["writing", "templates"],
     },
     {
       title: "Performance Review Framework",
@@ -370,6 +435,8 @@ Generate:
 5. **Development Plan Template**: Skills to develop
 
 Keep it constructive and growth-oriented.`,
+      authorIndex: 5, // Kari
+      tagSlugs: ["templates", "documentation"],
     },
   ],
   finance: [
@@ -391,6 +458,8 @@ Generate:
 6. **Outlook**: Brief forward-looking statement
 
 Keep it clear for non-financial readers while being accurate.`,
+      authorIndex: 4, // Ole
+      tagSlugs: ["analysis", "writing"],
     },
     {
       title: "Budget Justification",
@@ -411,6 +480,8 @@ Include:
 7. **Timeline**: When funds are needed and for how long
 
 Be specific with numbers and timelines.`,
+      authorIndex: 1, // Ingrid
+      tagSlugs: ["writing", "templates", "analysis"],
     },
   ],
   operations: [
@@ -434,6 +505,8 @@ Document:
 9. **Related Documents**: Links to forms, templates, etc.
 
 Use clear, action-oriented language.`,
+      authorIndex: 4, // Ole
+      tagSlugs: ["documentation", "templates"],
     },
     {
       title: "Meeting Agenda Generator",
@@ -456,60 +529,120 @@ Generate:
 5. **Parking lot**: Space for off-topic items
 
 Ensure time allocations are realistic for the duration.`,
+      authorIndex: 2, // Magnus
+      tagSlugs: ["productivity", "templates"],
     },
   ],
 };
 
+// Sample comments for testing
+const sampleComments = [
+  { text: "This prompt has been incredibly useful for our sales team. We've seen a 30% increase in response rates!", userIndex: 1 },
+  { text: "I modified this slightly to include industry-specific terminology and it works even better.", userIndex: 2 },
+  { text: "Would love to see a version optimized for cold calling scripts too.", userIndex: 3 },
+  { text: "Great starting point! I added a section for handling pricing objections.", userIndex: 4 },
+  { text: "This saved me hours of work. Highly recommend!", userIndex: 5 },
+  { text: "The structure is perfect for our use case. Thanks for sharing!", userIndex: 0 },
+];
+
+// Sample replies for nested comments
+const sampleReplies = [
+  { text: "Thanks for the feedback! I'll work on a cold calling version.", userIndex: 0 },
+  { text: "Could you share your modified version? Would love to see it.", userIndex: 3 },
+  { text: "Agreed! The ROI has been significant for our team as well.", userIndex: 5 },
+];
+
 async function main() {
-  console.log("🌱 Seeding Volue demo data...\n");
+  console.log("🌱 Seeding Volue test data (matching TESTING_GUIDE.md)...\n");
 
-  // Create demo user
-  const password = await bcrypt.hash("demo123", 12);
+  // Hash passwords
+  const password123Hash = await bcrypt.hash("password123", 12);
+  const demo123Hash = await bcrypt.hash("demo123", 12);
 
-  const demoUser = await prisma.user.upsert({
-    where: { email: "demo@volue.com" },
-    update: {},
-    create: {
-      email: "demo@volue.com",
-      username: "volue-demo",
-      name: "Volue Demo User",
-      password: password,
-      role: "ADMIN",
-      locale: "en",
-    },
-  });
+  // ==========================================================================
+  // 1. CREATE ADMIN USERS
+  // ==========================================================================
+  console.log("👤 Creating admin users...");
+  const createdAdmins: { id: string; username: string }[] = [];
 
-  console.log("✅ Created demo user (demo@volue.com / demo123)\n");
+  for (const admin of adminUsers) {
+    const passwordHash = admin.password === "password123" ? password123Hash : demo123Hash;
+    const user = await prisma.user.upsert({
+      where: { email: admin.email },
+      update: {},
+      create: {
+        email: admin.email,
+        username: admin.username,
+        name: admin.name,
+        password: passwordHash,
+        role: admin.role,
+        locale: "en",
+      },
+    });
+    createdAdmins.push({ id: user.id, username: user.username });
+    console.log(`   ✓ ${admin.name} (${admin.email})`);
+  }
 
-  // Create departments
-  console.log("📁 Creating departments...");
+  // ==========================================================================
+  // 2. CREATE REGULAR USERS
+  // ==========================================================================
+  console.log("\n👥 Creating regular users...");
+  const createdUsers: { id: string; username: string }[] = [];
+
+  for (const user of regularUsers) {
+    const created = await prisma.user.upsert({
+      where: { email: user.email },
+      update: {},
+      create: {
+        email: user.email,
+        username: user.username,
+        name: user.name,
+        password: demo123Hash,
+        role: "USER",
+        locale: "en",
+      },
+    });
+    createdUsers.push({ id: created.id, username: created.username });
+    console.log(`   ✓ ${user.name} (${user.email})`);
+  }
+
+  // ==========================================================================
+  // 3. CREATE TAGS
+  // ==========================================================================
+  console.log("\n🏷️  Creating tags...");
+  const tagMap = new Map<string, string>();
+
+  for (const tag of tags) {
+    const created = await prisma.tag.upsert({
+      where: { slug: tag.slug },
+      update: { name: tag.name, color: tag.color },
+      create: { name: tag.name, slug: tag.slug, color: tag.color },
+    });
+    tagMap.set(tag.slug, created.id);
+    console.log(`   ✓ ${tag.name}`);
+  }
+
+  // ==========================================================================
+  // 4. CREATE DEPARTMENTS (CATEGORIES)
+  // ==========================================================================
+  console.log("\n📁 Creating departments...");
   const categoryMap = new Map<string, string>();
 
   for (const dept of departments) {
     const category = await prisma.category.upsert({
       where: { slug: dept.slug },
-      update: {
-        name: dept.name,
-        icon: dept.icon,
-        description: dept.description,
-        order: dept.order,
-      },
-      create: {
-        name: dept.name,
-        slug: dept.slug,
-        icon: dept.icon,
-        description: dept.description,
-        order: dept.order,
-      },
+      update: { name: dept.name, icon: dept.icon, description: dept.description, order: dept.order, pinned: dept.pinned },
+      create: { name: dept.name, slug: dept.slug, icon: dept.icon, description: dept.description, order: dept.order, pinned: dept.pinned },
     });
     categoryMap.set(dept.slug, category.id);
-    console.log(`   ✓ ${dept.icon} ${dept.name}`);
+    console.log(`   ✓ ${dept.name}${dept.pinned ? " (pinned)" : ""}`);
   }
 
-  console.log(`\n✅ Created ${departments.length} departments\n`);
-
-  // Create sample prompts
-  console.log("📝 Creating sample prompts...");
+  // ==========================================================================
+  // 5. CREATE PROMPTS
+  // ==========================================================================
+  console.log("\n📝 Creating prompts...");
+  const createdPrompts: { id: string; title: string; authorId: string }[] = [];
   let totalPrompts = 0;
 
   for (const [slug, prompts] of Object.entries(samplePrompts)) {
@@ -517,40 +650,62 @@ async function main() {
     if (!categoryId) continue;
 
     for (const prompt of prompts) {
+      const author = createdUsers[prompt.authorIndex];
       const promptSlug = prompt.title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
 
-      // Check if prompt already exists
-      const existing = await prisma.prompt.findFirst({
-        where: { slug: promptSlug },
-      });
+      // Get tag IDs
+      const promptTagIds = prompt.tagSlugs
+        .map((s) => tagMap.get(s))
+        .filter((id): id is string => id !== undefined);
 
+      // Check if prompt already exists
+      const existing = await prisma.prompt.findFirst({ where: { slug: promptSlug } });
+
+      let promptId: string;
       if (existing) {
-        // Update existing
         await prisma.prompt.update({
           where: { id: existing.id },
-          data: {
-            title: prompt.title,
-            description: prompt.description,
-            content: prompt.content,
-            categoryId: categoryId,
-          },
+          data: { title: prompt.title, description: prompt.description, content: prompt.content, categoryId },
         });
+        promptId = existing.id;
       } else {
-        // Create new
-        await prisma.prompt.create({
+        const created = await prisma.prompt.create({
           data: {
             title: prompt.title,
             slug: promptSlug,
             description: prompt.description,
             content: prompt.content,
-            authorId: demoUser.id,
-            categoryId: categoryId,
+            authorId: author.id,
+            categoryId,
+          },
+        });
+        promptId = created.id;
+
+        // Create initial version
+        await prisma.promptVersion.create({
+          data: {
+            promptId,
+            version: 1,
+            content: prompt.content,
+            changeNote: "Initial version",
+            createdBy: author.id,
           },
         });
       }
+
+      // Add tags
+      for (const tagId of promptTagIds) {
+        await prisma.promptTag.upsert({
+          where: { promptId_tagId: { promptId, tagId } },
+          update: {},
+          create: { promptId, tagId },
+        });
+      }
+
+      createdPrompts.push({ id: promptId, title: prompt.title, authorId: author.id });
       totalPrompts++;
     }
 
@@ -558,12 +713,126 @@ async function main() {
     console.log(`   ✓ ${deptName}: ${prompts.length} prompts`);
   }
 
-  console.log(`\n✅ Created ${totalPrompts} sample prompts\n`);
+  // ==========================================================================
+  // 6. ADD UPVOTES ON PROMPTS
+  // ==========================================================================
+  console.log("\n👍 Adding upvotes...");
+  let voteCount = 0;
 
-  console.log("🎉 Volue demo data seeding complete!");
-  console.log("\n📋 Login credentials:");
-  console.log("   Email: demo@volue.com");
-  console.log("   Password: demo123");
+  // Add votes from different users to various prompts
+  for (let i = 0; i < createdPrompts.length; i++) {
+    const prompt = createdPrompts[i];
+    // Each prompt gets votes from 2-4 random users (not the author)
+    const numVotes = 2 + (i % 3);
+    const voters = createdUsers.filter((u) => u.id !== prompt.authorId).slice(0, numVotes);
+
+    for (const voter of voters) {
+      await prisma.promptVote.upsert({
+        where: { userId_promptId: { promptId: prompt.id, userId: voter.id } },
+        update: {},
+        create: { promptId: prompt.id, userId: voter.id },
+      });
+      voteCount++;
+    }
+  }
+  console.log(`   ✓ ${voteCount} upvotes added`);
+
+  // ==========================================================================
+  // 7. ADD COMMENTS
+  // ==========================================================================
+  console.log("\n💬 Adding comments...");
+  const createdCommentIds: string[] = [];
+
+  // Add comments to the first 6 prompts
+  for (let i = 0; i < Math.min(6, createdPrompts.length); i++) {
+    const prompt = createdPrompts[i];
+    const comment = sampleComments[i];
+    const commenter = createdUsers[comment.userIndex];
+
+    const created = await prisma.comment.create({
+      data: {
+        content: comment.text,
+        promptId: prompt.id,
+        authorId: commenter.id,
+      },
+    });
+    createdCommentIds.push(created.id);
+  }
+  console.log(`   ✓ ${createdCommentIds.length} comments added`);
+
+  // ==========================================================================
+  // 8. ADD COMMENT REPLIES (nested threads)
+  // ==========================================================================
+  console.log("\n↩️  Adding comment replies...");
+  let replyCount = 0;
+
+  // Add replies to first 3 comments
+  for (let i = 0; i < Math.min(3, createdCommentIds.length); i++) {
+    const parentId = createdCommentIds[i];
+    const reply = sampleReplies[i];
+    const replier = createdUsers[reply.userIndex];
+
+    // Get the parent comment to find the promptId
+    const parentComment = await prisma.comment.findUnique({ where: { id: parentId } });
+    if (parentComment) {
+      await prisma.comment.create({
+        data: {
+          content: reply.text,
+          promptId: parentComment.promptId,
+          authorId: replier.id,
+          parentId: parentId,
+        },
+      });
+      replyCount++;
+    }
+  }
+  console.log(`   ✓ ${replyCount} replies added`);
+
+  // ==========================================================================
+  // 9. ADD COMMENT VOTES
+  // ==========================================================================
+  console.log("\n⬆️  Adding comment votes...");
+  let commentVoteCount = 0;
+
+  // Add upvotes to comments from random users
+  for (const commentId of createdCommentIds.slice(0, 4)) {
+    const voters = createdUsers.slice(0, 3);
+    for (const voter of voters) {
+      await prisma.commentVote.upsert({
+        where: { userId_commentId: { commentId, userId: voter.id } },
+        update: {},
+        create: { commentId, userId: voter.id, value: 1 },
+      });
+      commentVoteCount++;
+    }
+  }
+  console.log(`   ✓ ${commentVoteCount} comment votes added`);
+
+  // ==========================================================================
+  // SUMMARY
+  // ==========================================================================
+  console.log("\n" + "=".repeat(60));
+  console.log("🎉 Volue test data seeding complete!");
+  console.log("=".repeat(60));
+  console.log(`
+📊 Summary:
+   • ${adminUsers.length} admin users
+   • ${regularUsers.length} regular users
+   • ${tags.length} tags
+   • ${departments.length} departments
+   • ${totalPrompts} prompts
+   • ${voteCount} upvotes
+   • ${createdCommentIds.length} comments
+   • ${replyCount} comment replies
+   • ${commentVoteCount} comment votes
+
+📋 Login credentials:
+   Admin:    admin@prompts.chat / password123
+   Demo:     demo@volue.com / demo123
+   Users:    [name]@volue.com / demo123
+             (erik.hansen, ingrid.berg, magnus.larsen,
+              sofie.andersen, ole.nilsen, kari.johansen)
+`);
 }
 
 main()
