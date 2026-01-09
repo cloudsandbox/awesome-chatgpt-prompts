@@ -715,12 +715,15 @@
     "mostUpvoted": "Most Upvoted",
     "search": "Search",
     "clear": "Clear",
+    "clearAll": "Clear all",
     "found": "{count} found",
     "aiSearch": "AI Search",
     "expandSearch": "Expand Query",
     "semanticSearchHint": "Powered by AI semantic search",
     "expandSearchHint": "AI will expand your query for better results",
-    "searchTags": "Search tags..."
+    "searchTags": "Search tags...",
+    "advancedFilters": "Advanced Filters",
+    "activeFilters": "Active filters"
   },
   "user": {
     "profile": "Profile",

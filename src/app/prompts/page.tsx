@@ -2,13 +2,10 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { unstable_cache } from "next/cache";
-import { Suspense } from "react";
 import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import { InfinitePromptList } from "@/components/prompts/infinite-prompt-list";
-import { PromptFilters } from "@/components/prompts/prompt-filters";
-import { FilterProvider } from "@/components/prompts/filter-context";
-import { PinnedCategories } from "@/components/categories/pinned-categories";
+import { SearchLayout } from "@/components/search/search-layout";
 import { db } from "@/lib/db";
 import { aiSearch, isAISearchAvailable } from "@/lib/ai/search";
 
@@ -63,6 +60,30 @@ const getTags = unstable_cache(
   { tags: ["tags"] }
 );
 
+// Query for popular tags (most used)
+const getPopularTags = unstable_cache(
+  async () => {
+    const result = await db.promptTag.groupBy({
+      by: ["tagId"],
+      _count: { tagId: true },
+      orderBy: { _count: { tagId: "desc" } },
+      take: 8,
+    });
+
+    const tagIds = result.map((r) => r.tagId);
+    const tags = await db.tag.findMany({
+      where: { id: { in: tagIds } },
+    });
+
+    // Sort by usage count
+    return tagIds
+      .map((id) => tags.find((t) => t.id === id))
+      .filter((t): t is NonNullable<typeof t> => t !== undefined);
+  },
+  ["popular-tags"],
+  { tags: ["tags"] }
+);
+
 // Query for prompts list (cached)
 function getCachedPrompts(
   where: Record<string, unknown>,
@@ -70,9 +91,8 @@ function getCachedPrompts(
   orderBy: any,
   perPage: number
 ) {
-  // Create a stable cache key from the query parameters
   const cacheKey = JSON.stringify({ where, orderBy, perPage });
-  
+
   return unstable_cache(
     async () => {
       const [promptsRaw, totalCount] = await Promise.all([
@@ -149,59 +169,59 @@ interface PromptsPageProps {
 
 export default async function PromptsPage({ searchParams }: PromptsPageProps) {
   const t = await getTranslations("prompts");
-  const tSearch = await getTranslations("search");
   const params = await searchParams;
 
   const perPage = 24;
-  const { available: aiSearchAvailable, error: aiSearchError } = await isAISearchAvailable();
+  const { available: aiSearchAvailable } = await isAISearchAvailable();
   const useAISearch = aiSearchAvailable && params.q;
   const expandSearch = params.expand === "1";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let prompts: any[] = [];
   let total = 0;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let groupedResults: Record<string, any[]> | null = null;
 
   if (useAISearch && params.q) {
-    // Use AI semantic search - combine keywords into a single search query
     try {
-      // Join comma-separated keywords with spaces for a single semantic search
-      const searchQuery = params.q.split(",").map(k => k.trim()).filter(Boolean).join(" ");
-      const aiResults = await aiSearch(searchQuery, { expand: expandSearch, limit: perPage });
+      const searchQuery = params.q
+        .split(",")
+        .map((k) => k.trim())
+        .filter(Boolean)
+        .join(" ");
+      const aiResults = await aiSearch(searchQuery, {
+        expand: expandSearch,
+        limit: perPage,
+      });
 
       prompts = aiResults.results.map((p) => ({
         ...p,
         contributorCount: 0,
       }));
-      groupedResults = aiResults.grouped;
       total = prompts.length;
     } catch {
       // Fallback to regular search on error
     }
   }
-  
+
   // Regular search if AI search not used or failed
   if (!useAISearch || prompts.length === 0) {
-    // Build where clause based on filters
     const where: Record<string, unknown> = {
       isPrivate: false,
-      isUnlisted: false, // Exclude unlisted prompts
-      deletedAt: null, // Exclude soft-deleted prompts
+      isUnlisted: false,
+      deletedAt: null,
     };
-    
+
     if (params.q) {
-      // Handle comma-separated keywords
-      const keywords = params.q.split(",").map(k => k.trim()).filter(Boolean);
+      const keywords = params.q
+        .split(",")
+        .map((k) => k.trim())
+        .filter(Boolean);
       if (keywords.length > 1) {
-        // Multiple keywords - match any of them
-        where.OR = keywords.flatMap(keyword => [
+        where.OR = keywords.flatMap((keyword) => [
           { title: { contains: keyword, mode: "insensitive" } },
           { content: { contains: keyword, mode: "insensitive" } },
           { description: { contains: keyword, mode: "insensitive" } },
         ]);
       } else {
-        // Single keyword
         where.OR = [
           { title: { contains: params.q, mode: "insensitive" } },
           { content: { contains: params.q, mode: "insensitive" } },
@@ -209,15 +229,15 @@ export default async function PromptsPage({ searchParams }: PromptsPageProps) {
         ];
       }
     }
-    
+
     if (params.type) {
       where.type = params.type;
     }
-    
+
     if (params.category) {
       where.categoryId = params.category;
     }
-    
+
     if (params.tag) {
       where.tags = {
         some: {
@@ -227,82 +247,71 @@ export default async function PromptsPage({ searchParams }: PromptsPageProps) {
         },
       };
     }
-    
-    // Build order by clause
+
     const isUpvoteSort = params.sort === "upvotes";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let orderBy: any = { createdAt: "desc" };
     if (params.sort === "oldest") {
       orderBy = { createdAt: "asc" };
     } else if (isUpvoteSort) {
-      // Sort by vote count descending
       orderBy = { votes: { _count: "desc" } };
     }
 
-    // Fetch initial prompts (first page) - cached
     const result = await getCachedPrompts(where, orderBy, perPage);
     prompts = result.prompts;
     total = result.total;
   }
 
-  // Fetch categories, pinned categories, and tags for filter
-  const [categories, pinnedCategories, tags] = await Promise.all([
+  // Fetch all required data
+  const [categories, pinnedCategories, tags, popularTags] = await Promise.all([
     getCategories(),
     getPinnedCategories(),
     getTags(),
+    getPopularTags(),
   ]);
 
   return (
-    <div className="container py-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-        <div className="flex items-baseline gap-2">
-          <h1 className="text-lg font-semibold">{t("title")}</h1>
-          <span className="text-xs text-muted-foreground">{tSearch("found", { count: total })}</span>
-        </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <Button size="sm" className="h-8 text-xs w-full sm:w-auto" asChild>
-            <Link href="/prompts/new">
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              {t("create")}
-            </Link>
-          </Button>
-        </div>
+    <>
+      {/* Fixed Create Button */}
+      <div className="fixed bottom-6 right-6 z-50 lg:hidden">
+        <Button size="lg" className="rounded-full shadow-lg h-14 w-14 p-0" asChild>
+          <Link href="/prompts/new">
+            <Plus className="h-6 w-6" />
+            <span className="sr-only">{t("create")}</span>
+          </Link>
+        </Button>
       </div>
-      
-      <FilterProvider>
-        <Suspense fallback={null}>
-          <div className="mb-4">
-            <PinnedCategories 
-              categories={pinnedCategories} 
-              currentCategoryId={params.category} 
-            />
-          </div>
-        </Suspense>
-        <div className="flex flex-col lg:flex-row gap-6">
-          <aside className="w-full lg:w-56 shrink-0 lg:sticky lg:top-16 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto">
-            <PromptFilters
-              categories={categories}
-              tags={tags}
-              currentFilters={params}
-              aiSearchEnabled={aiSearchAvailable}
-              aiSearchError={aiSearchError}
-            />
-          </aside>
-          <main className="flex-1 min-w-0">
-            <InfinitePromptList
-              initialPrompts={prompts}
-              initialTotal={total}
-              filters={{
-                q: params.q,
-                type: params.type,
-                category: params.category,
-                tag: params.tag,
-                sort: params.sort,
-              }}
-            />
-          </main>
-        </div>
-      </FilterProvider>
-    </div>
+
+      {/* Desktop Create Button */}
+      <div className="hidden lg:block fixed top-20 right-6 z-50">
+        <Button asChild>
+          <Link href="/prompts/new">
+            <Plus className="h-4 w-4 mr-2" />
+            {t("create")}
+          </Link>
+        </Button>
+      </div>
+
+      <SearchLayout
+        categories={categories}
+        pinnedCategories={pinnedCategories}
+        tags={tags}
+        popularTags={popularTags}
+        aiSearchEnabled={aiSearchAvailable}
+        totalResults={total}
+      >
+        <InfinitePromptList
+          initialPrompts={prompts}
+          initialTotal={total}
+          filters={{
+            q: params.q,
+            type: params.type,
+            category: params.category,
+            tag: params.tag,
+            sort: params.sort,
+          }}
+        />
+      </SearchLayout>
+    </>
   );
 }
