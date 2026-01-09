@@ -72,12 +72,18 @@ export async function generateAllEmbeddings(
   }
 
   // Find prompts without embeddings (or all if regenerating)
-  const prompts = await db.$queryRaw<Array<{ id: string }>>`
-    SELECT id FROM prompts
-    WHERE "isPrivate" = false
-      AND "deletedAt" IS NULL
-      ${regenerate ? db.$queryRaw`` : db.$queryRaw`AND embedding IS NULL`}
-  `;
+  const prompts = regenerate
+    ? await db.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM prompts
+        WHERE "isPrivate" = false
+          AND "deletedAt" IS NULL
+      `
+    : await db.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM prompts
+        WHERE "isPrivate" = false
+          AND "deletedAt" IS NULL
+          AND embedding IS NULL
+      `;
 
   const total = prompts.length;
   let success = 0;
