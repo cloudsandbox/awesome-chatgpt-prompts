@@ -4,7 +4,7 @@
  */
 
 const VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings";
-const VOYAGE_MODEL = process.env.VOYAGE_EMBEDDING_MODEL || "voyage-3-lite";
+const VOYAGE_MODEL = process.env.VOYAGE_EMBEDDING_MODEL || "voyage-3";
 const EMBEDDING_DIMENSIONS = 1024;
 
 interface VoyageEmbeddingResponse {
