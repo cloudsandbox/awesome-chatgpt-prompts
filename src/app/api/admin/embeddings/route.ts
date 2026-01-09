@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     const enabled = await isAISearchEnabled();
     if (!enabled) {
       return NextResponse.json(
-        { error: "AI Search is not enabled or OPENAI_API_KEY is not set" },
+        { error: "AI Search is not enabled or VOYAGE_API_KEY is not set" },
         { status: 400 }
       );
     }

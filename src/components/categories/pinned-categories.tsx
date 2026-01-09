@@ -75,7 +75,7 @@ export function PinnedCategories({ categories, currentCategoryId }: PinnedCatego
               : "bg-background hover:bg-accent border-border"
           )}
         >
-          <CategoryIcon slug={category.slug} size={14} />
+          <CategoryIcon slug={category.slug} icon={category.icon} size={14} />
           {category.name}
         </button>
       ))}

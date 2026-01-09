@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { semanticSearch, isAISearchEnabled } from "@/lib/ai/embeddings";
+import { semanticSearchWithPgvector, isAISearchAvailable } from "@/lib/ai/search";
 
 export interface PromptBuilderState {
   title: string;
@@ -258,7 +258,7 @@ export async function executeToolCall(
       
       try {
         // Run both full-text and semantic search in parallel
-        const useSemanticSearch = await isAISearchEnabled();
+        const { available: useSemanticSearch } = await isAISearchAvailable();
         
         // Full-text search
         const textSearchPromise = db.prompt.findMany({
@@ -293,8 +293,8 @@ export async function executeToolCall(
         });
 
         // Semantic search (if enabled)
-        const semanticSearchPromise = useSemanticSearch 
-          ? semanticSearch(query, limit)
+        const semanticSearchPromise = useSemanticSearch
+          ? semanticSearchWithPgvector(query, limit)
           : Promise.resolve([]);
 
         const [textResults, semanticResults] = await Promise.all([

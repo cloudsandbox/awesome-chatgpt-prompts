@@ -22,7 +22,6 @@ export default async function SettingsPage() {
       username: true,
       email: true,
       avatar: true,
-      verified: true,
       apiKey: true,
       mcpPromptsPublicByDefault: true,
     },
@@ -42,7 +41,7 @@ export default async function SettingsPage() {
       </div>
 
       <div className="space-y-6">
-        <ProfileForm user={user} showVerifiedSection={!config.homepage?.useCloneBranding} />
+        <ProfileForm user={user} />
 
         {config.features.mcp !== false && (
           <ApiKeySettings

@@ -24,7 +24,7 @@ export function CategoryItem({ category, isSubscribed, showSubscribe }: Category
         className="flex items-center gap-2 min-w-0 flex-1"
       >
         <span className="shrink-0">
-          <CategoryIcon slug={category.slug} size={18} />
+          <CategoryIcon slug={category.slug} icon={category.icon} size={18} />
         </span>
         <span className="text-sm font-medium truncate group-hover:underline">
           {category.name}

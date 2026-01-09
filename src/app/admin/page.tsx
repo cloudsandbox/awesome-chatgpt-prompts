@@ -42,14 +42,11 @@ export default async function AdminPage() {
   let promptsWithoutEmbeddings = 0;
   let totalPublicPrompts = 0;
   if (aiSearchEnabled) {
-    [promptsWithoutEmbeddings, totalPublicPrompts] = await Promise.all([
-      db.prompt.count({
-        where: {
-          isPrivate: false,
-          deletedAt: null,
-          embedding: { equals: Prisma.DbNull },
-        },
-      }),
+    const [withoutEmbeddingsResult, totalPublicResult] = await Promise.all([
+      db.$queryRaw<[{ count: bigint }]>`
+        SELECT COUNT(*) as count FROM prompts
+        WHERE "isPrivate" = false AND "deletedAt" IS NULL AND embedding IS NULL
+      `,
       db.prompt.count({
         where: {
           isPrivate: false,
@@ -57,6 +54,8 @@ export default async function AdminPage() {
         },
       }),
     ]);
+    promptsWithoutEmbeddings = Number(withoutEmbeddingsResult[0].count);
+    totalPublicPrompts = totalPublicResult;
   }
 
   // Count prompts without slugs

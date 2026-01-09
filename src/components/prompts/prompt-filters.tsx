@@ -41,14 +41,15 @@ interface PromptFiltersProps {
     category?: string;
     tag?: string;
     sort?: string;
-    ai?: string;
+    expand?: string;
   };
   aiSearchEnabled?: boolean;
+  aiSearchError?: string;
 }
 
 const promptTypes = ["TEXT", "STRUCTURED", "IMAGE", "VIDEO", "AUDIO"];
 
-export function PromptFilters({ categories, tags, currentFilters, aiSearchEnabled }: PromptFiltersProps) {
+export function PromptFilters({ categories, tags, currentFilters, aiSearchEnabled, aiSearchError }: PromptFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations();
@@ -106,7 +107,7 @@ export function PromptFilters({ categories, tags, currentFilters, aiSearchEnable
                 }
                 debounceRef.current = setTimeout(() => {
                   if (value) {
-                    analyticsSearch.search(value, currentFilters.ai === "1");
+                    analyticsSearch.search(value, currentFilters.expand === "1");
                   }
                   updateFilter("q", value || null);
                 }, 300);
@@ -114,17 +115,23 @@ export function PromptFilters({ categories, tags, currentFilters, aiSearchEnable
             />
           </div>
           {aiSearchEnabled && (
-            <div className="flex items-center gap-1 shrink-0">
-              <Sparkles className="h-3 w-3 text-primary" />
-              <Switch
-                id="ai-search-mobile"
-                checked={currentFilters.ai === "1"}
-                onCheckedChange={(checked) => {
-                  analyticsSearch.aiSearchToggle(checked);
-                  updateFilter("ai", checked ? "1" : null);
-                }}
-              />
-            </div>
+            <button
+              className={`flex items-center justify-center h-8 w-8 rounded-md border shrink-0 transition-colors ${
+                currentFilters.expand === "1"
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background hover:bg-muted border-input"
+              }`}
+              onClick={() => {
+                analyticsSearch.aiSearchToggle(currentFilters.expand !== "1");
+                updateFilter("expand", currentFilters.expand === "1" ? null : "1");
+              }}
+              title={t("search.expandSearch")}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {aiSearchError && (
+            <span className="text-xs text-destructive" title={aiSearchError}>!</span>
           )}
           <Button
             variant="outline"
@@ -189,7 +196,7 @@ export function PromptFilters({ categories, tags, currentFilters, aiSearchEnable
               }
               debounceRef.current = setTimeout(() => {
                 if (value) {
-                  analyticsSearch.search(value, currentFilters.ai === "1");
+                  analyticsSearch.search(value, currentFilters.expand === "1");
                 }
                 updateFilter("q", value || null);
               }, 300);
@@ -197,21 +204,26 @@ export function PromptFilters({ categories, tags, currentFilters, aiSearchEnable
           />
         </div>
 
-        {/* AI Search Toggle */}
+        {/* Query Expansion Toggle */}
         {aiSearchEnabled && (
           <div className="flex items-center justify-between py-1">
-            <Label className="text-xs flex items-center gap-1.5 cursor-pointer" htmlFor="ai-search">
+            <Label className="text-xs flex items-center gap-1.5 cursor-pointer" htmlFor="expand-search">
               <Sparkles className="h-3 w-3 text-primary" />
-              {t("search.aiSearch")}
+              {t("search.expandSearch")}
             </Label>
             <Switch
-              id="ai-search"
-              checked={currentFilters.ai === "1"}
+              id="expand-search"
+              checked={currentFilters.expand === "1"}
               onCheckedChange={(checked) => {
                 analyticsSearch.aiSearchToggle(checked);
-                updateFilter("ai", checked ? "1" : null);
+                updateFilter("expand", checked ? "1" : null);
               }}
             />
+          </div>
+        )}
+        {aiSearchError && (
+          <div className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1.5">
+            {aiSearchError}
           </div>
         )}
       </div>

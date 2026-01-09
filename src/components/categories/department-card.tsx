@@ -27,6 +27,7 @@ const SLUG_TO_ICON: Record<string, string> = {
   "design": "design",
   "creative": "creative",
   "operations": "operations",
+  "productivity": "productivity",
   "it": "engineering",
   "technology": "engineering",
   "development": "code",

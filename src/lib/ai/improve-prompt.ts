@@ -1,7 +1,6 @@
 import OpenAI from "openai";
-import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { generateEmbedding, isAISearchEnabled } from "@/lib/ai/embeddings";
+import { generateVoyageQueryEmbedding, isVoyageConfigured } from "@/lib/ai/voyage";
 import { loadPrompt, getSystemPrompt, interpolatePrompt } from "@/lib/ai/load-prompt";
 import { TYPE_DEFINITIONS } from "@/data/type-definitions";
 
@@ -41,20 +40,6 @@ export interface ImprovePromptResult {
   model: string;
 }
 
-function cosineSimilarity(a: number[], b: number[]): number {
-  let dotProduct = 0;
-  let normA = 0;
-  let normB = 0;
-
-  for (let i = 0; i < a.length; i++) {
-    dotProduct += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-
-  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-}
-
 function mapOutputTypeToDbType(outputType: OutputType): "TEXT" | "IMAGE" | "VIDEO" | "AUDIO" | null {
   switch (outputType) {
     case "image": return "IMAGE";
@@ -69,54 +54,47 @@ async function findSimilarPrompts(
   outputType: OutputType,
   limit: number = 3
 ): Promise<Array<{ id: string; slug: string | null; title: string; content: string; similarity: number }>> {
-  const aiSearchEnabled = await isAISearchEnabled();
-  if (!aiSearchEnabled) {
-    console.log("[improve-prompt] AI search is not enabled");
+  if (!isVoyageConfigured()) {
+    console.log("[improve-prompt] Voyage AI is not configured");
     return [];
   }
 
   try {
-    const queryEmbedding = await generateEmbedding(query);
+    const queryEmbedding = await generateVoyageQueryEmbedding(query);
+    const embeddingStr = `[${queryEmbedding.join(",")}]`;
     const dbType = mapOutputTypeToDbType(outputType);
-
-    const prompts = await db.prompt.findMany({
-      where: {
-        isPrivate: false,
-        deletedAt: null,
-        embedding: { not: Prisma.DbNull },
-        ...(dbType ? { type: dbType } : {}),
-      },
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        content: true,
-        embedding: true,
-      },
-      take: 100,
-    });
-
-    console.log(`[improve-prompt] Found ${prompts.length} prompts with embeddings`);
-
     const SIMILARITY_THRESHOLD = 0.3;
 
-    const scoredPrompts = prompts
-      .map((prompt) => {
-        const embedding = prompt.embedding as number[];
-        const similarity = cosineSimilarity(queryEmbedding, embedding);
-        return {
-          id: prompt.id,
-          slug: prompt.slug,
-          title: prompt.title,
-          content: prompt.content,
-          similarity,
-        };
-      })
-      .filter((prompt) => prompt.similarity >= SIMILARITY_THRESHOLD);
+    // Use pgvector for similarity search
+    const results = await db.$queryRaw<Array<{
+      id: string;
+      slug: string | null;
+      title: string;
+      content: string;
+      similarity: number;
+    }>>`
+      SELECT
+        id,
+        slug,
+        title,
+        content,
+        1 - (embedding <=> ${embeddingStr}::vector) as similarity
+      FROM prompts
+      WHERE "isPrivate" = false
+        AND "deletedAt" IS NULL
+        AND embedding IS NOT NULL
+        ${dbType ? db.$queryRaw`AND type = ${dbType}` : db.$queryRaw``}
+        AND 1 - (embedding <=> ${embeddingStr}::vector) >= ${SIMILARITY_THRESHOLD}
+      ORDER BY embedding <=> ${embeddingStr}::vector
+      LIMIT ${limit}
+    `;
 
-    scoredPrompts.sort((a, b) => b.similarity - a.similarity);
+    console.log(`[improve-prompt] Found ${results.length} similar prompts via pgvector`);
 
-    return scoredPrompts.slice(0, limit);
+    return results.map(r => ({
+      ...r,
+      similarity: Number(r.similarity),
+    }));
   } catch (error) {
     console.error("[improve-prompt] Error finding similar prompts:", error);
     return [];

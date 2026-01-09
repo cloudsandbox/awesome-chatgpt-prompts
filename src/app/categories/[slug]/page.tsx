@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PromptList } from "@/components/prompts/prompt-list";
 import { SubscribeButton } from "@/components/categories/subscribe-button";
 import { CategoryFilters } from "@/components/categories/category-filters";
+import { CategoryIcon } from "@/components/categories/category-icon";
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>;
@@ -153,6 +154,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
+              <CategoryIcon slug={slug} icon={category.icon} size={28} trigger="in" />
               <h1 className="text-xl font-semibold">{category.name}</h1>
               {session?.user && (
                 <SubscribeButton

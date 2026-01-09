@@ -10,7 +10,7 @@ import { PromptFilters } from "@/components/prompts/prompt-filters";
 import { FilterProvider } from "@/components/prompts/filter-context";
 import { PinnedCategories } from "@/components/categories/pinned-categories";
 import { db } from "@/lib/db";
-import { isAISearchEnabled, semanticSearch } from "@/lib/ai/embeddings";
+import { aiSearch, isAISearchAvailable } from "@/lib/ai/search";
 
 export const metadata: Metadata = {
   title: "Prompts",
@@ -143,7 +143,7 @@ interface PromptsPageProps {
     tag?: string;
     sort?: string;
     page?: string;
-    ai?: string;
+    expand?: string;
   }>;
 }
 
@@ -151,26 +151,30 @@ export default async function PromptsPage({ searchParams }: PromptsPageProps) {
   const t = await getTranslations("prompts");
   const tSearch = await getTranslations("search");
   const params = await searchParams;
-  
+
   const perPage = 24;
-  const aiSearchAvailable = await isAISearchEnabled();
-  const useAISearch = aiSearchAvailable && params.ai === "1" && params.q;
+  const { available: aiSearchAvailable, error: aiSearchError } = await isAISearchAvailable();
+  const useAISearch = aiSearchAvailable && params.q;
+  const expandSearch = params.expand === "1";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let prompts: any[] = [];
   let total = 0;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let groupedResults: Record<string, any[]> | null = null;
 
   if (useAISearch && params.q) {
     // Use AI semantic search - combine keywords into a single search query
     try {
       // Join comma-separated keywords with spaces for a single semantic search
       const searchQuery = params.q.split(",").map(k => k.trim()).filter(Boolean).join(" ");
-      const aiResults = await semanticSearch(searchQuery, perPage);
-      
-      prompts = aiResults.map((p) => ({
+      const aiResults = await aiSearch(searchQuery, { expand: expandSearch, limit: perPage });
+
+      prompts = aiResults.results.map((p) => ({
         ...p,
         contributorCount: 0,
       }));
+      groupedResults = aiResults.grouped;
       total = prompts.length;
     } catch {
       // Fallback to regular search on error
@@ -281,6 +285,7 @@ export default async function PromptsPage({ searchParams }: PromptsPageProps) {
               tags={tags}
               currentFilters={params}
               aiSearchEnabled={aiSearchAvailable}
+              aiSearchError={aiSearchError}
             />
           </aside>
           <main className="flex-1 min-w-0">

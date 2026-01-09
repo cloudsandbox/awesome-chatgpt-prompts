@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CategoryIcon } from "@/components/categories/category-icon";
+import { AVAILABLE_ICONS, ICON_DISPLAY_NAMES, type IconName } from "@/lib/icons";
 import {
   Select,
   SelectContent,
@@ -188,12 +190,15 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
         method: "DELETE",
       });
 
-      if (!res.ok) throw new Error("Failed to delete");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete");
+      }
 
       toast.success(t("deleted"));
       router.refresh();
-    } catch {
-      toast.error(t("deleteFailed"));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("deleteFailed"));
     } finally {
       setLoading(false);
       setDeleteId(null);
@@ -239,7 +244,7 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
                       {category.level > 0 && (
                         <ChevronRight className="h-3 w-3 text-muted-foreground" />
                       )}
-                      {category.icon && <span>{category.icon}</span>}
+                      <CategoryIcon slug={category.slug} icon={category.icon} size={20} trigger="hover" />
                       <span className={category.level === 0 ? "font-medium" : ""}>{category.name}</span>
                       {category._count.children > 0 && (
                         <Badge variant="secondary" className="text-xs">
@@ -338,8 +343,10 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
                   <SelectItem value="none">{t("noParent")}</SelectItem>
                   {getValidParentOptions().map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
-                      {cat.icon && <span className="mr-2">{cat.icon}</span>}
-                      {cat.name}
+                      <div className="flex items-center gap-2">
+                        <CategoryIcon slug={cat.slug} icon={cat.icon} size={16} trigger="hover" />
+                        <span>{cat.name}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -356,12 +363,37 @@ export function CategoriesTable({ categories }: CategoriesTableProps) {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="icon">{t("icon")}</Label>
-              <Input
-                id="icon"
-                value={formData.icon}
-                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                placeholder="📁"
-              />
+              <Select
+                value={formData.icon || "auto"}
+                onValueChange={(value) => setFormData({ ...formData, icon: value === "auto" ? "" : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("selectIcon")}>
+                    {formData.icon ? (
+                      <div className="flex items-center gap-2">
+                        <CategoryIcon slug="" icon={formData.icon} size={18} trigger="hover" />
+                        <span>{ICON_DISPLAY_NAMES[formData.icon as IconName] || formData.icon}</span>
+                      </div>
+                    ) : (
+                      <span>{t("autoAssign")}</span>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  <SelectItem value="auto">
+                    <span className="text-muted-foreground">{t("autoAssign")}</span>
+                  </SelectItem>
+                  {AVAILABLE_ICONS.map((iconName) => (
+                    <SelectItem key={iconName} value={iconName}>
+                      <div className="flex items-center gap-2">
+                        <CategoryIcon slug="" icon={iconName} size={18} trigger="hover" />
+                        <span>{ICON_DISPLAY_NAMES[iconName]}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{t("iconHelp")}</p>
             </div>
             <div className="flex items-center gap-2">
               <input

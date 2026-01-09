@@ -611,7 +611,10 @@
       "pinned": "Category pinned",
       "unpinned": "Category unpinned",
       "pinnedBadge": "Pinned",
-      "pinnedLabel": "Pin to prompts page (show as quick filter)"
+      "pinnedLabel": "Pin to prompts page (show as quick filter)",
+      "selectIcon": "Select an icon",
+      "autoAssign": "Auto-assign (recommended)",
+      "iconHelp": "Icons are automatically assigned to new categories. You can also select one manually."
     },
     "tags": {
       "title": "Tag Management",
@@ -714,6 +717,9 @@
     "clear": "Clear",
     "found": "{count} found",
     "aiSearch": "AI Search",
+    "expandSearch": "Expand Query",
+    "semanticSearchHint": "Powered by AI semantic search",
+    "expandSearchHint": "AI will expand your query for better results",
     "searchTags": "Search tags..."
   },
   "user": {

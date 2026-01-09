@@ -24,6 +24,8 @@ This is Volue's curated collection of AI prompts organized by department. Browse
 ## Features
 
 - Browse prompts by department
+- **AI-powered semantic search** - Find prompts by meaning, not just keywords
+- Query expansion with Claude for natural language searches
 - Run prompts directly in Microsoft 365 Copilot
 - Light and dark mode support
 - Search and filter prompts
@@ -34,7 +36,7 @@ This is Volue's curated collection of AI prompts organized by department. Browse
 ### Prerequisites
 
 - Node.js 24.x
-- PostgreSQL database
+- PostgreSQL database with pgvector extension (for AI search)
 
 ### Installation
 
@@ -61,10 +63,27 @@ npm run dev
 Create a `.env` file with the following variables:
 
 ```env
+# Database
 DATABASE_URL="postgresql://user:password@localhost:5432/prompts"
+
+# Authentication
 NEXTAUTH_SECRET="your-secret-key"
 NEXTAUTH_URL="http://localhost:3000"
+
+# AI Search (optional - enables semantic search)
+VOYAGE_API_KEY="your-voyage-api-key"          # Required for AI-powered semantic search
+ANTHROPIC_API_KEY="your-anthropic-api-key"    # Optional - enables query expansion with Claude
 ```
+
+#### AI Search Setup
+
+To enable AI-powered semantic search:
+
+1. Get a Voyage AI API key from https://www.voyageai.com/
+2. Add `VOYAGE_API_KEY` to your environment
+3. Ensure your PostgreSQL database has the pgvector extension installed
+4. Run migrations: `npm run db:push`
+5. Generate embeddings for existing prompts via the admin panel
 
 ## Development
 

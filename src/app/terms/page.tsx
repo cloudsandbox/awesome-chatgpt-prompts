@@ -143,19 +143,6 @@ export default function TermsPage() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">User Verification</h2>
-          <p className="text-muted-foreground">
-            Users may receive a &quot;verified&quot; status on their profile. Verification is granted at the sole discretion 
-            of administrators to users who consistently contribute quality prompts to the platform. There are no strict 
-            criteria or requirements for verification — it is an informal recognition of valuable community members.
-          </p>
-          <p className="text-muted-foreground mt-3">
-            Verified status may be revoked at any time if a user&apos;s contributions no longer meet quality expectations 
-            or if they violate these terms.
-          </p>
-        </section>
-
-        <section className="space-y-3">
           <h2 className="text-lg font-semibold">AI Preview Generation Credits</h2>
           <p className="text-muted-foreground">
             The platform provides AI-powered media generation features to create preview images, videos, or audio for prompts. 

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { findAndSaveRelatedPrompts } from "@/lib/ai/embeddings";
@@ -33,16 +32,14 @@ export async function POST() {
     }
 
     // Get all public prompts with embeddings
-    const prompts = await db.prompt.findMany({
-      where: {
-        isPrivate: false,
-        isUnlisted: false,
-        deletedAt: null,
-        embedding: { not: Prisma.DbNull },
-      },
-      select: { id: true },
-      orderBy: { createdAt: "desc" },
-    });
+    const prompts = await db.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM prompts
+      WHERE "isPrivate" = false
+        AND "isUnlisted" = false
+        AND "deletedAt" IS NULL
+        AND embedding IS NOT NULL
+      ORDER BY "createdAt" DESC
+    `;
 
     if (prompts.length === 0) {
       return NextResponse.json({ error: "No prompts to process" }, { status: 400 });

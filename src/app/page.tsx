@@ -4,6 +4,8 @@ import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { DiscoveryPrompts } from "@/components/prompts/discovery-prompts";
 import { DepartmentCard } from "@/components/categories/department-card";
+import { HeroSearch } from "@/components/search/hero-search";
+import { isAISearchAvailable } from "@/lib/ai/search";
 
 // Volue brand colors
 const colors = {
@@ -49,7 +51,10 @@ const getDepartments = unstable_cache(
 
 export default async function HomePage() {
   const t = await getTranslations("homepage");
-  const departments = await getDepartments();
+  const [departments, { available: aiSearchEnabled }] = await Promise.all([
+    getDepartments(),
+    isAISearchAvailable(),
+  ]);
 
   return (
     <div className="flex flex-col">
@@ -73,9 +78,12 @@ export default async function HomePage() {
             </h1>
 
             {/* Subtitle */}
-            <p className="text-lg md:text-xl text-zinc-600 dark:text-[#dcedf5]">
+            <p className="text-lg md:text-xl text-zinc-600 dark:text-[#dcedf5] mb-8">
               Find prompts for your department
             </p>
+
+            {/* Hero Search Bar */}
+            <HeroSearch aiSearchEnabled={aiSearchEnabled} />
           </div>
         </div>
       </section>

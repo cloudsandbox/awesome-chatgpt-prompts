@@ -92,7 +92,7 @@ export default async function CategoriesPage() {
               {/* Main Category Header */}
               <div className="flex items-start gap-3 mb-3">
                 <div className="mt-0.5">
-                  <CategoryIcon slug={category.slug} size={28} />
+                  <CategoryIcon slug={category.slug} icon={category.icon} size={28} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
@@ -132,7 +132,7 @@ export default async function CategoriesPage() {
                       className="group py-2 px-3 -mx-3 rounded-md hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <CategoryIcon slug={child.slug} size={18} />
+                        <CategoryIcon slug={child.slug} icon={child.icon} size={18} />
                         <Link
                           href={`/categories/${child.slug}`}
                           className="text-sm font-medium hover:underline"
