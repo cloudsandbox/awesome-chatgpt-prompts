@@ -1,22 +1,19 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 
-let openai: OpenAI | null = null;
+let anthropic: Anthropic | null = null;
 
-function getOpenAIClient(): OpenAI | null {
-  if (!openai) {
-    const apiKey = process.env.OPENAI_API_KEY;
+function getAnthropicClient(): Anthropic | null {
+  if (!anthropic) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return null;
     }
-    openai = new OpenAI({ 
-      apiKey,
-      baseURL: process.env.OPENAI_BASE_URL || undefined,
-    });
+    anthropic = new Anthropic({ apiKey });
   }
-  return openai;
+  return anthropic;
 }
 
-const GENERATIVE_MODEL = process.env.OPENAI_GENERATIVE_MODEL || "gpt-4o-mini";
+const GENERATIVE_MODEL = process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-20241022";
 
 /**
  * Converts a string to a URL-friendly slug
@@ -42,31 +39,30 @@ function isLikelyNonEnglish(text: string): boolean {
 }
 
 /**
- * Translates text to English using OpenAI
+ * Translates text to English using Anthropic Claude
  */
 export async function translateToEnglish(text: string): Promise<string> {
-  const client = getOpenAIClient();
-  
+  const client = getAnthropicClient();
+
   if (!client) {
-    // No OpenAI key, return original text
+    // No Anthropic key, return original text
     return text;
   }
 
   try {
-    const response = await client.chat.completions.create({
+    const response = await client.messages.create({
       model: GENERATIVE_MODEL,
-      messages: [
-        { 
-          role: "system", 
-          content: "Translate the following text to English. Return ONLY the translated text, nothing else. If the text is already in English, return it as-is." 
-        },
-        { role: "user", content: text }
-      ],
-      temperature: 0.1,
       max_tokens: 200,
+      messages: [
+        {
+          role: "user",
+          content: `Translate the following text to English. Return ONLY the translated text, nothing else. If the text is already in English, return it as-is.\n\n${text}`
+        }
+      ],
     });
-    
-    return response.choices[0]?.message?.content?.trim() || text;
+
+    const content = response.content[0];
+    return content.type === "text" ? content.text.trim() : text;
   } catch (error) {
     console.error("Translation error:", error);
     return text;
@@ -79,12 +75,12 @@ export async function translateToEnglish(text: string): Promise<string> {
  */
 export async function generateSlug(title: string): Promise<string> {
   let textToSlugify = title;
-  
+
   // If text contains non-English characters, translate it first
   if (isLikelyNonEnglish(title)) {
     textToSlugify = await translateToEnglish(title);
   }
-  
+
   return slugify(textToSlugify);
 }
 

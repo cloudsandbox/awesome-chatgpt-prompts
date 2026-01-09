@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { toast } from "sonner";
 import { analyticsTranslate } from "@/lib/analytics";
 
-// Map locale codes to full language names for OpenAI
+// Map locale codes to full language names for AI translation
 const localeToLanguage: Record<string, string> = {
   en: "English",
   tr: "Turkish",

@@ -308,7 +308,7 @@ export function LordIcon({
   if (isLoading) {
     return (
       <div
-        className={`animate-pulse bg-muted rounded ${className}`}
+        className={`animate-pulse bg-muted rounded ${className || ""}`}
         style={{ width: size, height: size }}
       />
     );
@@ -317,7 +317,7 @@ export function LordIcon({
   if (hasError || !iconData) {
     return (
       <div
-        className={`bg-muted rounded flex items-center justify-center text-muted-foreground ${className}`}
+        className={`bg-muted rounded flex items-center justify-center text-muted-foreground ${className || ""}`}
         style={{ width: size, height: size }}
       >
         ?

@@ -48,15 +48,16 @@ const tags = [
 ];
 
 // Department categories for Volue
+// Icon names must match LordIcon names (see src/components/categories/category-icon.tsx)
 const departments = [
-  { name: "Sales", slug: "sales", icon: "trending-up", description: "Prompts for customer outreach, proposals, and sales communication", order: 1, pinned: true },
-  { name: "Marketing", slug: "marketing", icon: "megaphone", description: "Content creation, campaigns, and brand messaging", order: 2, pinned: true },
-  { name: "Engineering", slug: "engineering", icon: "code", description: "Code assistance, debugging, documentation, and technical writing", order: 3, pinned: true },
-  { name: "Product Management", slug: "product-management", icon: "layout-grid", description: "Product specs, user stories, roadmaps, and feature planning", order: 4, pinned: true },
-  { name: "Customer Support", slug: "customer-support", icon: "headphones", description: "Customer responses, troubleshooting guides, and support documentation", order: 5, pinned: false },
-  { name: "Human Resources", slug: "human-resources", icon: "users", description: "Job descriptions, policies, onboarding, and employee communication", order: 6, pinned: false },
-  { name: "Finance", slug: "finance", icon: "bar-chart-2", description: "Financial reports, analysis, and business documentation", order: 7, pinned: false },
-  { name: "Operations", slug: "operations", icon: "settings", description: "Process documentation, workflows, and operational efficiency", order: 8, pinned: false },
+  { name: "Sales", slug: "sales", icon: "sales", description: "Prompts for customer outreach, proposals, and sales communication", order: 1, pinned: true },
+  { name: "Marketing", slug: "marketing", icon: "marketing", description: "Content creation, campaigns, and brand messaging", order: 2, pinned: true },
+  { name: "Engineering", slug: "engineering", icon: "engineering", description: "Code assistance, debugging, documentation, and technical writing", order: 3, pinned: true },
+  { name: "Product Management", slug: "product-management", icon: "product", description: "Product specs, user stories, roadmaps, and feature planning", order: 4, pinned: true },
+  { name: "Customer Support", slug: "customer-support", icon: "support", description: "Customer responses, troubleshooting guides, and support documentation", order: 5, pinned: false },
+  { name: "Human Resources", slug: "human-resources", icon: "hr", description: "Job descriptions, policies, onboarding, and employee communication", order: 6, pinned: false },
+  { name: "Finance", slug: "finance", icon: "finance", description: "Financial reports, analysis, and business documentation", order: 7, pinned: false },
+  { name: "Operations", slug: "operations", icon: "operations", description: "Process documentation, workflows, and operational efficiency", order: 8, pinned: false },
 ];
 
 // Sample prompts for each department with author assignment

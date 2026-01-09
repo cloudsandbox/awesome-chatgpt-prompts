@@ -31,7 +31,7 @@ describe("WEBHOOK_PLACEHOLDERS", () => {
     expect(WEBHOOK_PLACEHOLDERS.TAGS).toBe("{{TAGS}}");
     expect(WEBHOOK_PLACEHOLDERS.TIMESTAMP).toBe("{{TIMESTAMP}}");
     expect(WEBHOOK_PLACEHOLDERS.SITE_URL).toBe("{{SITE_URL}}");
-    expect(WEBHOOK_PLACEHOLDERS.CHATGPT_URL).toBe("{{CHATGPT_URL}}");
+    expect(WEBHOOK_PLACEHOLDERS.CLAUDE_URL).toBe("{{CLAUDE_URL}}");
   });
 
   it("should have consistent placeholder format", () => {

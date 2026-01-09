@@ -171,12 +171,6 @@ export function PromptCard({ prompt, showPinButton = false, isPinned = false }: 
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent pointer-events-none" />
-          {/* Badges overlay */}
-          <div className="absolute top-2 right-2 flex items-center gap-1.5">
-            <Badge variant="secondary" className="text-[10px] bg-background/80 backdrop-blur-sm">
-              {t(`types.${prompt.type.toLowerCase()}`)}
-            </Badge>
-          </div>
         </div>
       )}
 
@@ -202,11 +196,6 @@ export function PromptCard({ prompt, showPinButton = false, isPinned = false }: 
               {prompt.title}
             </Link>
           </div>
-          {(!hasMediaBackground || isAudio) && (
-            <Badge variant="outline" className="text-[10px] shrink-0">
-              {t(`types.${prompt.type.toLowerCase()}`)}
-            </Badge>
-          )}
         </div>
 
         {/* Description */}

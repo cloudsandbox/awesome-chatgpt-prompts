@@ -302,7 +302,6 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const perPage = parseInt(searchParams.get("perPage") || "24");
-    const type = searchParams.get("type");
     const categoryId = searchParams.get("category");
     const tag = searchParams.get("tag");
     const sort = searchParams.get("sort");
@@ -313,10 +312,6 @@ export async function GET(request: Request) {
       isUnlisted: false, // Exclude unlisted prompts from public API
       deletedAt: null, // Exclude soft-deleted prompts
     };
-
-    if (type) {
-      where.type = type;
-    }
 
     if (categoryId) {
       where.categoryId = categoryId;

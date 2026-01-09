@@ -1,12 +1,8 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
-import { Info } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { PromptForm } from "@/components/prompts/prompt-form";
+import { AIPromptCreator } from "@/components/prompts/ai-prompt-creator";
 import { db } from "@/lib/db";
-import { isAIGenerationEnabled, getAIModelName } from "@/lib/ai/generation";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const metadata: Metadata = {
   title: "Create Prompt",
@@ -14,65 +10,51 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ 
-    prompt?: string; 
-    title?: string; 
+  searchParams: Promise<{
+    prompt?: string;
+    title?: string;
     content?: string;
     type?: "TEXT" | "IMAGE" | "VIDEO" | "AUDIO";
     format?: "JSON" | "YAML";
+    classic?: string;
   }>;
 }
 
 export default async function NewPromptPage({ searchParams }: PageProps) {
   const session = await auth();
-  const t = await getTranslations("prompts");
-  const { prompt: initialPromptRequest, title, content, type, format } = await searchParams;
+  const params = await searchParams;
 
   if (!session?.user) {
     redirect("/login");
   }
 
-  // Fetch categories for the form (with parent info for nesting)
-  const categories = await db.category.findMany({
-    orderBy: [{ order: "asc" }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      parentId: true,
-    },
-  });
+  // Redirect to classic form if explicitly requested or if there are URL params for prefill
+  if (params.classic || params.prompt || params.title || params.content || params.type || params.format) {
+    const queryString = new URLSearchParams(
+      Object.entries(params).filter(([k, v]) => v !== undefined && k !== "classic") as [string, string][]
+    ).toString();
+    redirect(`/prompts/new/classic${queryString ? `?${queryString}` : ""}`);
+  }
 
-  // Fetch tags for the form
-  const tags = await db.tag.findMany({
-    orderBy: { name: "asc" },
-  });
-
-  // Check if AI generation is enabled
-  const aiGenerationEnabled = await isAIGenerationEnabled();
-  const aiModelName = getAIModelName();
+  // Fetch categories and tags
+  const [categories, tags] = await Promise.all([
+    db.category.findMany({
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        parentId: true,
+      },
+    }),
+    db.tag.findMany({
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   return (
-    <div className="container max-w-3xl py-8">
-      <Alert className="mb-6">
-        <Info className="h-4 w-4" />
-        <AlertDescription>
-          {t("createInfo")}
-        </AlertDescription>
-      </Alert>
-      <PromptForm 
-        categories={categories} 
-        tags={tags} 
-        aiGenerationEnabled={aiGenerationEnabled}
-        aiModelName={aiModelName}
-        initialPromptRequest={initialPromptRequest}
-        initialData={(title || content || type || format) ? { 
-          title: title || "", 
-          content: content || "",
-          type: type || "TEXT",
-          structuredFormat: format || undefined,
-        } : undefined}
-      />
+    <div className="container max-w-2xl py-8">
+      <AIPromptCreator categories={categories} tags={tags} />
     </div>
   );
 }

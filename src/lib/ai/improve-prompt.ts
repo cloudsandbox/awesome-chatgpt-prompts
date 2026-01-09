@@ -1,25 +1,22 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/lib/db";
 import { generateVoyageQueryEmbedding, isVoyageConfigured } from "@/lib/ai/voyage";
 import { loadPrompt, getSystemPrompt, interpolatePrompt } from "@/lib/ai/load-prompt";
 import { TYPE_DEFINITIONS } from "@/data/type-definitions";
 
-const IMPROVE_MODEL = process.env.OPENAI_IMPROVE_MODEL || "gpt-4o";
+const IMPROVE_MODEL = process.env.ANTHROPIC_IMPROVE_MODEL || "claude-sonnet-4-20250514";
 
-let openai: OpenAI | null = null;
+let anthropic: Anthropic | null = null;
 
-function getOpenAIClient(): OpenAI {
-  if (!openai) {
-    const apiKey = process.env.OPENAI_API_KEY;
+function getAnthropicClient(): Anthropic {
+  if (!anthropic) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
-      throw new Error("OPENAI_API_KEY is not set");
+      throw new Error("ANTHROPIC_API_KEY is not set");
     }
-    openai = new OpenAI({
-      apiKey,
-      baseURL: process.env.OPENAI_BASE_URL || undefined,
-    });
+    anthropic = new Anthropic({ apiKey });
   }
-  return openai;
+  return anthropic;
 }
 
 export type OutputType = "text" | "image" | "video" | "sound";
@@ -119,7 +116,7 @@ function formatSimilarPrompts(
 export async function improvePrompt(input: ImprovePromptInput): Promise<ImprovePromptResult> {
   const { prompt, outputType = "text", outputFormat = "text" } = input;
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error("AI features are not configured");
   }
 
@@ -142,19 +139,18 @@ export async function improvePrompt(input: ImprovePromptInput): Promise<ImproveP
     originalPrompt: prompt,
   });
 
-  // Call OpenAI
-  const client = getOpenAIClient();
-  const response = await client.chat.completions.create({
+  // Call Anthropic
+  const client = getAnthropicClient();
+  const response = await client.messages.create({
     model: IMPROVE_MODEL,
+    max_tokens: improvePromptFile.modelParameters?.maxTokens ?? 4000,
+    system: systemPrompt,
     messages: [
-      { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
-    temperature: improvePromptFile.modelParameters?.temperature ?? 0.7,
-    max_tokens: improvePromptFile.modelParameters?.maxTokens ?? 4000,
   });
 
-  const improvedPrompt = response.choices[0]?.message?.content?.trim() || "";
+  const improvedPrompt = response.content[0].type === "text" ? response.content[0].text.trim() : "";
 
   if (!improvedPrompt) {
     throw new Error("Failed to generate improved prompt");

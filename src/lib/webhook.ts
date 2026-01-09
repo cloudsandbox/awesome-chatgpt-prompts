@@ -37,7 +37,7 @@ export const WEBHOOK_PLACEHOLDERS = {
   TAGS: "{{TAGS}}",
   TIMESTAMP: "{{TIMESTAMP}}",
   SITE_URL: "{{SITE_URL}}",
-  CHATGPT_URL: "{{CHATGPT_URL}}",
+  CLAUDE_URL: "{{CLAUDE_URL}}",
 } as const;
 
 // Slack Block Kit preset for new prompts
@@ -69,11 +69,11 @@ export const SLACK_PRESET_PAYLOAD = `{
           "type": "button",
           "text": {
             "type": "plain_text",
-            "text": "Run in ChatGPT",
+            "text": "Run in Claude",
             "emoji": true
           },
-          "url": "{{CHATGPT_URL}}",
-          "action_id": "run_chatgpt"
+          "url": "{{CLAUDE_URL}}",
+          "action_id": "run_claude"
         },
         {
           "type": "button",
@@ -155,7 +155,7 @@ function replacePlaceholders(template: string, prompt: PromptData): string {
   const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://prompts.chat";
   const promptUrl = `${siteUrl}/prompts/${prompt.id}`;
   const defaultAvatar = `${siteUrl}/default-avatar.png`;
-  const chatgptUrl = `https://chat.openai.com/?prompt=${encodeURIComponent(prompt.content)}`;
+  const claudeUrl = `https://claude.ai/new?q=${encodeURIComponent(prompt.content)}`;
 
   const replacements: Record<string, string> = {
     [WEBHOOK_PLACEHOLDERS.PROMPT_ID]: prompt.id,
@@ -179,7 +179,7 @@ function replacePlaceholders(template: string, prompt: PromptData): string {
       minute: "2-digit",
     }),
     [WEBHOOK_PLACEHOLDERS.SITE_URL]: siteUrl,
-    [WEBHOOK_PLACEHOLDERS.CHATGPT_URL]: chatgptUrl,
+    [WEBHOOK_PLACEHOLDERS.CLAUDE_URL]: claudeUrl,
   };
 
   let result = template;

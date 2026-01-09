@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@/lib/auth";
 import { getConfig } from "@/lib/config";
 import {
@@ -11,7 +11,7 @@ import { loadPrompt, getSystemPrompt } from "@/lib/ai/load-prompt";
 
 const promptBuilderAgentPrompt = loadPrompt("src/app/api/prompt-builder/chat/prompt-builder-agent.prompt.yml");
 
-const GENERATIVE_MODEL = process.env.OPENAI_GENERATIVE_MODEL || "gpt-4o-mini";
+const GENERATIVE_MODEL = process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-20241022";
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
@@ -61,6 +61,15 @@ interface RequestBody {
   availableCategories: Array<{ id: string; name: string; slug: string; parentId: string | null }>;
 }
 
+// Convert tools to Anthropic format
+function convertToolsToAnthropic(): Anthropic.Tool[] {
+  return PROMPT_BUILDER_TOOLS.map(tool => ({
+    name: tool.function.name,
+    description: tool.function.description || "",
+    input_schema: tool.function.parameters as Anthropic.Tool.InputSchema,
+  }));
+}
+
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user) {
@@ -74,12 +83,12 @@ export async function POST(request: NextRequest) {
   const userId = session.user.id || session.user.email || "anonymous";
   const rateLimit = checkRateLimit(userId);
   if (!rateLimit.allowed) {
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: "Rate limit exceeded. Please try again later.",
       resetIn: Math.ceil(rateLimit.resetIn / 1000)
     }), {
       status: 429,
-      headers: { 
+      headers: {
         "Content-Type": "application/json",
         "X-RateLimit-Remaining": "0",
         "X-RateLimit-Reset": String(Math.ceil(rateLimit.resetIn / 1000)),
@@ -95,9 +104,9 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: "OpenAI API key not configured" }), {
+    return new Response(JSON.stringify({ error: "Anthropic API key not configured" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
@@ -110,24 +119,20 @@ export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
-  
+
   const send = async (data: object) => {
     await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
   };
 
   // Start processing in background
   (async () => {
-
     try {
-      const openai = new OpenAI({
-        apiKey,
-        baseURL: process.env.OPENAI_BASE_URL || undefined,
-      });
+      const anthropic = new Anthropic({ apiKey });
 
       // Build available tags and categories context
       const tagNames = availableTags.map(t => t.name).join(", ");
       const categoryNames = availableCategories.map(c => c.name).join(", ");
-        
+
       const availableContext = `
 
 AVAILABLE TAGS (use exact names with set_tags):
@@ -143,7 +148,7 @@ ${categoryNames || "(none)"}`;
         .filter(Boolean)
         .join(", ");
       const selectedCategoryName = availableCategories.find(c => c.id === currentState.categoryId)?.name;
-      
+
       const stateContext = hasContent ? `
 
 CURRENT PROMPT STATE:
@@ -158,40 +163,40 @@ ${currentState.content || "(not set)"}
 
 CRITICAL: When editing content, you MUST preserve the FULL content above. Do NOT shorten, summarize, or truncate it. Only make the specific changes the user requested while keeping everything else exactly the same.` : "";
 
-      // Convert messages to OpenAI format
-      const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-        { role: "system", content: SYSTEM_PROMPT + availableContext + stateContext },
-      ];
+      // Convert messages to Anthropic format
+      const anthropicMessages: Anthropic.MessageParam[] = [];
 
       for (const msg of messages) {
         if (msg.role === "user") {
-          openaiMessages.push({ role: "user", content: msg.content });
+          anthropicMessages.push({ role: "user", content: msg.content });
         } else if (msg.role === "assistant") {
           if (msg.toolCalls && msg.toolCalls.length > 0) {
-            openaiMessages.push({
-              role: "assistant",
-              content: msg.content || null,
-              tool_calls: msg.toolCalls.map((tc) => ({
+            // Assistant message with tool use
+            const contentBlocks: (Anthropic.TextBlockParam | Anthropic.ToolUseBlockParam)[] = [];
+            if (msg.content) {
+              contentBlocks.push({ type: "text", text: msg.content });
+            }
+            for (const tc of msg.toolCalls) {
+              contentBlocks.push({
+                type: "tool_use",
                 id: tc.id,
-                type: "function" as const,
-                function: {
-                  name: tc.name,
-                  arguments: tc.arguments,
-                },
-              })),
-            });
+                name: tc.name,
+                input: JSON.parse(tc.arguments),
+              });
+            }
+            anthropicMessages.push({ role: "assistant", content: contentBlocks });
 
-            if (msg.toolResults) {
-              for (const tr of msg.toolResults) {
-                openaiMessages.push({
-                  role: "tool",
-                  tool_call_id: tr.id,
-                  content: JSON.stringify(tr.result),
-                });
-              }
+            // Add tool results as user message
+            if (msg.toolResults && msg.toolResults.length > 0) {
+              const toolResultBlocks: Anthropic.ToolResultBlockParam[] = msg.toolResults.map(tr => ({
+                type: "tool_result" as const,
+                tool_use_id: tr.id,
+                content: JSON.stringify(tr.result),
+              }));
+              anthropicMessages.push({ role: "user", content: toolResultBlocks });
             }
           } else {
-            openaiMessages.push({ role: "assistant", content: msg.content });
+            anthropicMessages.push({ role: "assistant", content: msg.content });
           }
         }
       }
@@ -200,62 +205,62 @@ CRITICAL: When editing content, you MUST preserve the FULL content above. Do NOT
       let state = { ...currentState };
       let loopCount = 0;
       const maxLoops = 10;
-      const allToolCalls: Array<{ id: string; name: string; arguments: string; result: unknown }> = [];
+
+      const anthropicTools = convertToolsToAnthropic();
 
       while (loopCount < maxLoops) {
         loopCount++;
 
-        // Use streaming for the final response
-        const response = await openai.chat.completions.create({
+        // Use streaming
+        const stream = await anthropic.messages.stream({
           model: GENERATIVE_MODEL,
-          messages: openaiMessages,
-          tools: PROMPT_BUILDER_TOOLS,
-          tool_choice: "auto",
-          temperature: 0.7,
           max_tokens: 2000,
-          stream: true,
+          system: SYSTEM_PROMPT + availableContext + stateContext,
+          messages: anthropicMessages,
+          tools: anthropicTools,
         });
 
         let fullContent = "";
-        const toolCallsAccumulator: Map<number, { id: string; name: string; arguments: string }> = new Map();
+        const toolUseBlocks: Array<{ id: string; name: string; input: unknown }> = [];
 
-        for await (const chunk of response) {
-          const delta = chunk.choices[0]?.delta;
-
-          // Stream text content
-          if (delta?.content) {
-            fullContent += delta.content;
-            await send({ type: "text", content: delta.content });
-          }
-
-          // Accumulate tool calls - handle streaming chunks properly
-          if (delta?.tool_calls) {
-            for (const tc of delta.tool_calls) {
-              const idx = tc.index;
-              const existing = toolCallsAccumulator.get(idx);
-              
-              if (existing) {
-                // Append to existing tool call
-                if (tc.id) existing.id = tc.id;
-                if (tc.function?.name) existing.name = tc.function.name;
-                if (tc.function?.arguments) existing.arguments += tc.function.arguments;
-              } else {
-                // Create new tool call entry
-                toolCallsAccumulator.set(idx, {
-                  id: tc.id || "",
-                  name: tc.function?.name || "",
-                  arguments: tc.function?.arguments || "",
+        for await (const event of stream) {
+          if (event.type === "content_block_delta") {
+            const delta = event.delta;
+            if (delta.type === "text_delta") {
+              fullContent += delta.text;
+              await send({ type: "text", content: delta.text });
+            } else if (delta.type === "input_json_delta") {
+              // Tool input is being streamed - we'll get the full input at content_block_stop
+            }
+          } else if (event.type === "content_block_stop") {
+            // Check if we have accumulated tool use blocks
+            const message = await stream.finalMessage();
+            for (const block of message.content) {
+              if (block.type === "tool_use" && !toolUseBlocks.find(t => t.id === block.id)) {
+                toolUseBlocks.push({
+                  id: block.id,
+                  name: block.name,
+                  input: block.input,
                 });
               }
             }
           }
         }
 
-        // Filter for valid tool calls (must have id and name)
-        const toolCalls = Array.from(toolCallsAccumulator.values()).filter(tc => tc.id && tc.name);
+        // Get final message to ensure we have all tool use blocks
+        const finalMessage = await stream.finalMessage();
+        for (const block of finalMessage.content) {
+          if (block.type === "tool_use" && !toolUseBlocks.find(t => t.id === block.id)) {
+            toolUseBlocks.push({
+              id: block.id,
+              name: block.name,
+              input: block.input,
+            });
+          }
+        }
 
         // If no tool calls, we're done
-        if (toolCalls.length === 0) {
+        if (toolUseBlocks.length === 0) {
           await send({ type: "state", state });
           await send({ type: "done" });
           await writer.write(encoder.encode("data: [DONE]\n\n"));
@@ -266,12 +271,11 @@ CRITICAL: When editing content, you MUST preserve the FULL content above. Do NOT
         // Process tool calls
         const toolResults: Array<{ id: string; name: string; result: unknown }> = [];
 
-        for (const toolCall of toolCalls) {
+        for (const toolUse of toolUseBlocks) {
           try {
-            const args = JSON.parse(toolCall.arguments);
             const { result, newState } = await executeToolCall(
-              toolCall.name,
-              args,
+              toolUse.name,
+              toolUse.input as Record<string, unknown>,
               state,
               availableTags,
               availableCategories
@@ -279,19 +283,17 @@ CRITICAL: When editing content, you MUST preserve the FULL content above. Do NOT
             state = newState;
 
             const toolCallResult = {
-              id: toolCall.id,
-              name: toolCall.name,
-              arguments: toolCall.arguments,
+              id: toolUse.id,
+              name: toolUse.name,
+              arguments: JSON.stringify(toolUse.input),
               result,
             };
 
             toolResults.push({
-              id: toolCall.id,
-              name: toolCall.name,
+              id: toolUse.id,
+              name: toolUse.name,
               result,
             });
-
-            allToolCalls.push(toolCallResult);
 
             // Stream tool call result
             await send({ type: "tool_call", toolCall: toolCallResult });
@@ -300,28 +302,28 @@ CRITICAL: When editing content, you MUST preserve the FULL content above. Do NOT
           }
         }
 
-        // Add assistant message with tool calls to conversation
-        openaiMessages.push({
-          role: "assistant",
-          content: fullContent || null,
-          tool_calls: toolCalls.map((tc) => ({
-            id: tc.id,
-            type: "function" as const,
-            function: {
-              name: tc.name,
-              arguments: tc.arguments,
-            },
-          })),
-        });
-
-        // Add tool results
-        for (const tr of toolResults) {
-          openaiMessages.push({
-            role: "tool",
-            tool_call_id: tr.id,
-            content: JSON.stringify(tr.result),
+        // Add assistant message with tool use to conversation
+        const assistantContent: (Anthropic.TextBlockParam | Anthropic.ToolUseBlockParam)[] = [];
+        if (fullContent) {
+          assistantContent.push({ type: "text", text: fullContent });
+        }
+        for (const toolUse of toolUseBlocks) {
+          assistantContent.push({
+            type: "tool_use",
+            id: toolUse.id,
+            name: toolUse.name,
+            input: toolUse.input as Record<string, unknown>,
           });
         }
+        anthropicMessages.push({ role: "assistant", content: assistantContent });
+
+        // Add tool results as user message
+        const toolResultBlocks: Anthropic.ToolResultBlockParam[] = toolResults.map(tr => ({
+          type: "tool_result" as const,
+          tool_use_id: tr.id,
+          content: JSON.stringify(tr.result),
+        }));
+        anthropicMessages.push({ role: "user", content: toolResultBlocks });
       }
 
       // Max loops reached

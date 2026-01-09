@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { loadPrompt, getSystemPrompt } from "./load-prompt";
 
 const qualityCheckPrompt = loadPrompt("src/lib/ai/quality-check.prompt.yml");
@@ -6,23 +6,20 @@ const qualityCheckPrompt = loadPrompt("src/lib/ai/quality-check.prompt.yml");
 // DelistReason enum values (matches Prisma schema)
 export type DelistReason = "TOO_SHORT" | "NOT_ENGLISH" | "LOW_QUALITY" | "NOT_LLM_INSTRUCTION" | "MANUAL";
 
-let openai: OpenAI | null = null;
+let anthropic: Anthropic | null = null;
 
-function getOpenAIClient(): OpenAI {
-  if (!openai) {
-    const apiKey = process.env.OPENAI_API_KEY;
+function getAnthropicClient(): Anthropic {
+  if (!anthropic) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
-      throw new Error("OPENAI_API_KEY is not set");
+      throw new Error("ANTHROPIC_API_KEY is not set");
     }
-    openai = new OpenAI({ 
-      apiKey,
-      baseURL: process.env.OPENAI_BASE_URL || undefined,
-    });
+    anthropic = new Anthropic({ apiKey });
   }
-  return openai;
+  return anthropic;
 }
 
-const GENERATIVE_MODEL = process.env.OPENAI_GENERATIVE_MODEL || "gpt-4o";
+const GENERATIVE_MODEL = process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-20241022";
 
 // Minimum character count for prompt content
 const MIN_CONTENT_LENGTH = 50;
@@ -75,7 +72,7 @@ export async function checkPromptQuality(
   description?: string | null
 ): Promise<QualityCheckResult> {
   console.log(`[Quality Check] Checking: "${title}" (${content.length} chars)`);
-  
+
   // First, run basic length checks (no AI needed)
   const lengthCheck = checkLength(content);
   if (lengthCheck) {
@@ -83,10 +80,10 @@ export async function checkPromptQuality(
     return lengthCheck;
   }
 
-  // Check if OpenAI is available
-  const apiKey = process.env.OPENAI_API_KEY;
+  // Check if Anthropic is available
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    console.log(`[Quality Check] No OpenAI API key - skipping AI check`);
+    console.log(`[Quality Check] No Anthropic API key - skipping AI check`);
     // If no AI available, pass the check (avoid false positives)
     return {
       shouldDelist: false,
@@ -95,11 +92,11 @@ export async function checkPromptQuality(
       details: "AI quality check skipped - no API key configured",
     };
   }
-  
+
   console.log(`[Quality Check] Running AI check...`);
 
   try {
-    const client = getOpenAIClient();
+    const client = getAnthropicClient();
 
     const systemPrompt = getSystemPrompt(qualityCheckPrompt);
 
@@ -108,23 +105,27 @@ ${description ? `Description: ${description}\n` : ""}
 Content:
 ${content}`;
 
-    const response = await client.chat.completions.create({
+    const response = await client.messages.create({
       model: GENERATIVE_MODEL,
+      max_tokens: 300,
+      system: systemPrompt + "\n\nRespond with JSON only, no markdown formatting.",
       messages: [
-        { role: "system", content: systemPrompt },
         { role: "user", content: userMessage }
       ],
-      temperature: 0.1, // Low temperature for consistent results
-      max_tokens: 300,
-      response_format: { type: "json_object" },
     });
 
-    const responseText = response.choices[0]?.message?.content || "{}";
+    const responseText = response.content[0].type === "text" ? response.content[0].text : "{}";
     console.log(`[Quality Check] AI response:`, responseText);
-    
+
     try {
-      const result = JSON.parse(responseText);
-      
+      // Parse JSON from response (handle potential markdown code blocks)
+      let jsonStr = responseText.trim();
+      if (jsonStr.startsWith("```")) {
+        jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+      }
+
+      const result = JSON.parse(jsonStr);
+
       // Extra safety: only delist if confidence is high enough
       if (result.shouldDelist && result.confidence < 0.85) {
         return {
@@ -167,7 +168,7 @@ ${content}`;
  * Check if auto-delist feature is enabled
  */
 export async function isAutoDelistEnabled(): Promise<boolean> {
-  // Auto-delist requires OpenAI API key for AI checks
+  // Auto-delist requires Anthropic API key for AI checks
   // Basic length checks will still work without it
   return true;
 }

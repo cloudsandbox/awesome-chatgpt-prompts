@@ -158,7 +158,6 @@ function getCachedPrompts(
 interface PromptsPageProps {
   searchParams: Promise<{
     q?: string;
-    type?: string;
     category?: string;
     tag?: string;
     sort?: string;
@@ -228,10 +227,6 @@ export default async function PromptsPage({ searchParams }: PromptsPageProps) {
           { description: { contains: params.q, mode: "insensitive" } },
         ];
       }
-    }
-
-    if (params.type) {
-      where.type = params.type;
     }
 
     if (params.category) {
@@ -305,7 +300,6 @@ export default async function PromptsPage({ searchParams }: PromptsPageProps) {
           initialTotal={total}
           filters={{
             q: params.q,
-            type: params.type,
             category: params.category,
             tag: params.tag,
             sort: params.sort,

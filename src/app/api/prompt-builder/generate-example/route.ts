@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@/lib/auth";
 import { getConfig } from "@/lib/config";
 import { loadPrompt, interpolatePrompt } from "@/lib/ai/load-prompt";
@@ -13,12 +13,12 @@ import {
 
 const generateExamplePrompt = loadPrompt("src/lib/ai/generate-example.prompt.yml");
 
-const GENERATIVE_MODEL = process.env.OPENAI_GENERATIVE_MODEL || "gpt-4o";
+const GENERATIVE_MODEL = process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-20241022";
 
 // Extract valid method names from TYPE_DEFINITIONS for each builder type
 function extractValidMethods(): Map<string, Set<string>> {
   const builderMethods = new Map<string, Set<string>>();
-  
+
   // Match class methods: methodName(params): ReturnType
   const classPatterns = [
     { name: 'video', regex: /export class VideoPromptBuilder \{([\s\S]*?)^\s*\}/m },
@@ -27,7 +27,7 @@ function extractValidMethods(): Map<string, Set<string>> {
     { name: 'chat', regex: /export class ChatPromptBuilder \{([\s\S]*?)^\s*\}/m },
     { name: 'builder', regex: /export class PromptBuilder \{([\s\S]*?)^\s*\}/m },
   ];
-  
+
   for (const { name, regex } of classPatterns) {
     const match = TYPE_DEFINITIONS.match(regex);
     if (match) {
@@ -40,7 +40,7 @@ function extractValidMethods(): Map<string, Set<string>> {
       builderMethods.set(name, methods);
     }
   }
-  
+
   return builderMethods;
 }
 
@@ -60,11 +60,11 @@ function removeInvalidMethods(code: string, validMethods: Set<string>): string {
   // We need to remove entire method calls including their arguments
   const lines = code.split('\n');
   const cleanedLines: string[] = [];
-  
+
   let i = 0;
   while (i < lines.length) {
     const line = lines[i];
-    
+
     // Check if line contains a method call
     const methodMatch = line.match(/^\s*\.(\w+)\s*\(/);
     if (methodMatch) {
@@ -74,7 +74,7 @@ function removeInvalidMethods(code: string, validMethods: Set<string>): string {
         let bracketCount = 0;
         let foundOpen = false;
         let skipUntil = i;
-        
+
         for (let j = i; j < lines.length; j++) {
           const checkLine = lines[j];
           for (const char of checkLine) {
@@ -88,16 +88,16 @@ function removeInvalidMethods(code: string, validMethods: Set<string>): string {
           skipUntil = j;
           if (foundOpen && bracketCount === 0) break;
         }
-        
+
         i = skipUntil + 1;
         continue;
       }
     }
-    
+
     cleanedLines.push(line);
     i++;
   }
-  
+
   return cleanedLines.join('\n');
 }
 
@@ -105,15 +105,15 @@ function removeInvalidMethods(code: string, validMethods: Set<string>): string {
 function validateAndCleanCode(code: string): string {
   const validMethodsMap = extractValidMethods();
   const builderType = detectBuilderType(code);
-  
+
   if (!builderType) return code;
-  
+
   const validMethods = validMethodsMap.get(builderType);
   if (!validMethods || validMethods.size === 0) return code;
-  
+
   // Add common methods that are valid for all builders
   validMethods.add('build');
-  
+
   return removeInvalidMethods(code, validMethods);
 }
 
@@ -153,12 +153,12 @@ export async function POST() {
   const userId = session.user.id || session.user.email || "anonymous";
   const rateLimit = checkRateLimit(userId);
   if (!rateLimit.allowed) {
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: "Rate limit exceeded. You can generate one example per minute.",
       resetIn: Math.ceil(rateLimit.resetIn / 1000)
     }), {
       status: 429,
-      headers: { 
+      headers: {
         "Content-Type": "application/json",
         "X-RateLimit-Remaining": "0",
         "X-RateLimit-Reset": String(Math.ceil(rateLimit.resetIn / 1000)),
@@ -174,19 +174,16 @@ export async function POST() {
     });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: "OpenAI API key not configured" }), {
+    return new Response(JSON.stringify({ error: "Anthropic API key not configured" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
   }
 
   try {
-    const openai = new OpenAI({
-      apiKey,
-      baseURL: process.env.OPENAI_BASE_URL || undefined,
-    });
+    const anthropic = new Anthropic({ apiKey });
 
     // Prepare existing examples summary
     const existingExamples = `
@@ -210,29 +207,24 @@ ${DEFAULT_CODE}
     const systemMessage = generateExamplePrompt.messages.find(m => m.role === "system");
     const userMessage = generateExamplePrompt.messages.find(m => m.role === "user");
 
-    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      {
-        role: "system",
-        content: interpolatePrompt(systemMessage?.content || "", {
-          typeDefinitions: TYPE_DEFINITIONS,
-        }),
-      },
-      {
-        role: "user",
-        content: interpolatePrompt(userMessage?.content || "", {
-          existingExamples,
-        }),
-      },
-    ];
-
-    const response = await openai.chat.completions.create({
-      model: GENERATIVE_MODEL,
-      messages,
-      temperature: generateExamplePrompt.modelParameters?.temperature || 0.9,
-      max_tokens: generateExamplePrompt.modelParameters?.maxTokens || 2000,
+    const systemPrompt = interpolatePrompt(systemMessage?.content || "", {
+      typeDefinitions: TYPE_DEFINITIONS,
     });
 
-    const generatedCode = response.choices[0]?.message?.content || "";
+    const userPrompt = interpolatePrompt(userMessage?.content || "", {
+      existingExamples,
+    });
+
+    const response = await anthropic.messages.create({
+      model: GENERATIVE_MODEL,
+      max_tokens: generateExamplePrompt.modelParameters?.maxTokens || 2000,
+      system: systemPrompt,
+      messages: [
+        { role: "user", content: userPrompt },
+      ],
+    });
+
+    const generatedCode = response.content[0].type === "text" ? response.content[0].text : "";
 
     // Clean up the response - remove markdown code blocks if present
     let cleanCode = generatedCode.trim();

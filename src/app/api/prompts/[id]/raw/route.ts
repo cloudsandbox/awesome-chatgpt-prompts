@@ -84,7 +84,7 @@ export async function GET(
       lines.push(`description: ${prompt.description}`);
     }
     lines.push(
-      `model: openai/gpt-4o-mini`,
+      `model: anthropic/claude-3-5-haiku-20241022`,
       `modelParameters:`,
       `  temperature: 0.5`,
       `messages:`,

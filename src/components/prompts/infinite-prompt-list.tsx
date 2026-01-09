@@ -15,7 +15,6 @@ interface InfinitePromptListProps {
   initialTotal: number;
   filters: {
     q?: string;
-    type?: string;
     category?: string;
     tag?: string;
     sort?: string;
@@ -92,7 +91,6 @@ export function InfinitePromptList({
       const params = new URLSearchParams();
       params.set("page", nextPage.toString());
       if (filters.q) params.set("q", filters.q);
-      if (filters.type) params.set("type", filters.type);
       if (filters.category) params.set("category", filters.category);
       if (filters.tag) params.set("tag", filters.tag);
       if (filters.sort) params.set("sort", filters.sort);

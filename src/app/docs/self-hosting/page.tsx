@@ -277,20 +277,24 @@ export default function SelfHostingPage() {
                 </TableHeader>
                 <TableBody>
                   <TableRow>
-                    <TableCell className="font-mono text-xs">OPENAI_API_KEY</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">OpenAI API key for AI search and generation</TableCell>
+                    <TableCell className="font-mono text-xs">ANTHROPIC_API_KEY</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">Anthropic API key for AI search and generation</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-mono text-xs">OPENAI_BASE_URL</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">Custom base URL for OpenAI-compatible APIs</TableCell>
+                    <TableCell className="font-mono text-xs">ANTHROPIC_MODEL</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">Claude model for AI generation (default: <code className="text-xs">claude-3-5-haiku-20241022</code>)</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-mono text-xs">OPENAI_EMBEDDING_MODEL</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">Embedding model (default: <code className="text-xs">text-embedding-3-small</code>)</TableCell>
+                    <TableCell className="font-mono text-xs">ANTHROPIC_IMPROVE_MODEL</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">Claude model for prompt improvement (default: <code className="text-xs">claude-sonnet-4-20250514</code>)</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-mono text-xs">OPENAI_GENERATIVE_MODEL</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">Generative model (default: <code className="text-xs">gpt-4o-mini</code>)</TableCell>
+                    <TableCell className="font-mono text-xs">VOYAGE_API_KEY</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">Voyage AI API key for embeddings in AI search</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-mono text-xs">VOYAGE_EMBEDDING_MODEL</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">Voyage embedding model (default: <code className="text-xs">voyage-3</code>)</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -508,12 +512,12 @@ export default function SelfHostingPage() {
                   <TableRow>
                     <TableCell className="font-mono text-xs">aiSearch</TableCell>
                     <TableCell className="text-muted-foreground text-xs">false</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">AI-powered semantic search (requires OPENAI_API_KEY)</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">AI-powered semantic search (requires ANTHROPIC_API_KEY and VOYAGE_API_KEY)</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell className="font-mono text-xs">aiGeneration</TableCell>
                     <TableCell className="text-muted-foreground text-xs">false</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">AI-powered generation features (requires OPENAI_API_KEY)</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">AI-powered generation features (requires ANTHROPIC_API_KEY)</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>

@@ -1,21 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PromptsSearchBar } from "./prompts-search-bar";
 import { FilterProvider } from "@/components/prompts/filter-context";
+import { CategoryIcon } from "@/components/categories/category-icon";
 import { cn } from "@/lib/utils";
-import {
-  FileText,
-  Image,
-  Video,
-  Music,
-  LayoutGrid,
-  Clock,
-  TrendingUp,
-  ArrowUpDown,
-} from "lucide-react";
+import { Clock, TrendingUp } from "lucide-react";
 
 interface SearchLayoutProps {
   children: React.ReactNode;
@@ -47,14 +38,6 @@ interface SearchLayoutProps {
   totalResults: number;
 }
 
-const promptTypes = [
-  { value: "", label: "All", icon: LayoutGrid },
-  { value: "TEXT", label: "Text", icon: FileText },
-  { value: "IMAGE", label: "Image", icon: Image },
-  { value: "VIDEO", label: "Video", icon: Video },
-  { value: "AUDIO", label: "Audio", icon: Music },
-];
-
 const sortOptions = [
   { value: "", label: "Newest", icon: Clock },
   { value: "oldest", label: "Oldest", icon: Clock },
@@ -72,7 +55,6 @@ export function SearchLayout({
   const searchParams = useSearchParams();
   const t = useTranslations();
 
-  const currentType = searchParams?.get("type") || "";
   const currentCategory = searchParams?.get("category") || "";
   const currentTag = searchParams?.get("tag") || "";
   const currentSort = searchParams?.get("sort") || "";
@@ -103,37 +85,13 @@ export function SearchLayout({
     <FilterProvider>
       <div className="min-h-screen">
         {/* Search Header */}
-        <div className="sticky top-14 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="sticky top-14 z-40 bg-muted/50 backdrop-blur supports-[backdrop-filter]:bg-muted/40 border-b">
           <div className="container py-4 space-y-3">
             {/* Search Bar */}
             <PromptsSearchBar aiSearchEnabled={aiSearchEnabled} />
 
-            {/* Type + Sort Chips */}
+            {/* Sort Chips */}
             <div className="flex flex-wrap items-center justify-center gap-1.5">
-              {/* Type chips */}
-              {promptTypes.map((type) => {
-                const Icon = type.icon;
-                const isActive = currentType === type.value;
-                return (
-                  <button
-                    key={type.value || "all"}
-                    onClick={() => updateFilter("type", type.value)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full border transition-all",
-                      isActive
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background hover:bg-muted border-input text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {type.label}
-                  </button>
-                );
-              })}
-
-              <div className="w-px h-5 bg-border mx-1" />
-
-              {/* Sort chips */}
               {sortOptions.map((sort) => {
                 const Icon = sort.icon;
                 const isActive = currentSort === sort.value;
@@ -155,59 +113,63 @@ export function SearchLayout({
               })}
             </div>
 
-            {/* Category + Tag Chips */}
-            <div className="flex flex-wrap items-center justify-center gap-1.5">
-              {/* Pinned Categories */}
-              {pinnedCategories.map((category) => {
-                const isActive = currentCategory === category.id;
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => toggleFilter("category", category.id)}
-                    className={cn(
-                      "px-3 py-1 text-sm rounded-full border transition-all",
-                      isActive
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background hover:bg-muted border-input"
-                    )}
-                  >
-                    {category.name}
-                  </button>
-                );
-              })}
+            {/* Categories Row */}
+            {pinnedCategories.length > 0 && (
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                <span className="text-xs text-muted-foreground mr-1">Categories:</span>
+                {pinnedCategories.map((category) => {
+                  const isActive = currentCategory === category.id;
+                  return (
+                    <button
+                      key={category.id}
+                      onClick={() => toggleFilter("category", category.id)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 px-3 py-1 text-sm rounded-full border transition-all",
+                        isActive
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700 dark:bg-blue-950 dark:hover:bg-blue-900 dark:border-blue-800 dark:text-blue-300"
+                      )}
+                    >
+                      <CategoryIcon slug={category.slug} icon={category.icon} size={14} />
+                      {category.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-              {pinnedCategories.length > 0 && popularTags.length > 0 && (
-                <div className="w-px h-5 bg-border mx-1" />
-              )}
-
-              {/* Popular Tags */}
-              {popularTags.slice(0, 6).map((tag) => {
-                const isActive = currentTag === tag.slug;
-                return (
-                  <button
-                    key={tag.id}
-                    onClick={() => toggleFilter("tag", tag.slug)}
-                    className={cn(
-                      "px-3 py-1 text-sm rounded-full border transition-all"
-                    )}
-                    style={
-                      isActive
-                        ? {
-                            backgroundColor: tag.color,
-                            color: "white",
-                            borderColor: tag.color,
-                          }
-                        : {
-                            borderColor: tag.color + "50",
-                            color: tag.color,
-                          }
-                    }
-                  >
-                    {tag.name}
-                  </button>
-                );
-              })}
-            </div>
+            {/* Tags Row */}
+            {popularTags.length > 0 && (
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                <span className="text-xs text-muted-foreground mr-1">Tags:</span>
+                {popularTags.slice(0, 6).map((tag) => {
+                  const isActive = currentTag === tag.slug;
+                  return (
+                    <button
+                      key={tag.id}
+                      onClick={() => toggleFilter("tag", tag.slug)}
+                      className={cn(
+                        "px-3 py-1 text-sm rounded-full border transition-all"
+                      )}
+                      style={
+                        isActive
+                          ? {
+                              backgroundColor: tag.color,
+                              color: "white",
+                              borderColor: tag.color,
+                            }
+                          : {
+                              borderColor: tag.color + "50",
+                              color: tag.color,
+                            }
+                      }
+                    >
+                      #{tag.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 

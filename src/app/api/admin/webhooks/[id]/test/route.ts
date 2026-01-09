@@ -48,7 +48,7 @@ export async function POST(
         minute: "2-digit",
       }),
       "{{SITE_URL}}": siteUrl,
-      "{{CHATGPT_URL}}": `https://chat.openai.com/?prompt=${encodeURIComponent("This is the test prompt content. It demonstrates how your webhook will receive data when a new prompt is created.")}`,
+      "{{CLAUDE_URL}}": `https://claude.ai/new?q=${encodeURIComponent("This is the test prompt content. It demonstrates how your webhook will receive data when a new prompt is created.")}`,
     };
 
     for (const [placeholder, value] of Object.entries(testData)) {
