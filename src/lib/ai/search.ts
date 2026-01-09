@@ -106,7 +106,7 @@ export async function expandQueryWithClaude(query: string): Promise<string> {
     const client = new Anthropic({ apiKey });
 
     const response = await client.messages.create({
-      model: "claude-3-5-haiku-latest",
+      model: "claude-haiku-4-5-20251101",
       max_tokens: 150,
       messages: [
         {
